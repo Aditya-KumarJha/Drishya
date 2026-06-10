@@ -40,6 +40,7 @@ import {
   selectIncidentsByMonitorId,
   selectMonitors,
 } from '../../store/dashboardSelectors';
+import { SEO } from '../../components/seo';
 
 const DashboardPage = () => {
   const dispatch = useDispatch();
@@ -82,8 +83,6 @@ const DashboardPage = () => {
   } = useSelector(selectDashboardCounts);
   const validViewIds = navItems.map((item) => item.id);
   const activeView = validViewIds.includes(view) ? view : 'overview';
-const {user} = useSelector(state=>state.auth)
-
   // Socket.IO realtime signals
   useEffect(() => {
     const socket = connectSocket();
@@ -283,7 +282,13 @@ const {user} = useSelector(state=>state.auth)
   };
 
   return (
-    <main
+    <>
+      <SEO
+        title={`${activeNavItem?.label || 'Dashboard'} Dashboard`}
+        description="Private Drishya Monitor OS dashboard for uptime, incidents, alerts, and AI monitoring insights."
+        noIndex
+      />
+      <main
       className="h-screen overflow-hidden bg-[#1E6BFF] font-sans text-slate-950"
       style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px)',
@@ -467,7 +472,8 @@ const {user} = useSelector(state=>state.auth)
           onUpdate={updateEditForm}
         />
       )}
-    </main>
+      </main>
+    </>
   );
 };
 

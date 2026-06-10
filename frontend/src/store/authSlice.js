@@ -323,8 +323,8 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.user = null;
         state.isAuthenticated = false;
-        state.isOtpRequired = false; // <-- Yahan add karein
-        state.authType = null;      // <-- Yahan add karein
+        state.isOtpRequired = false;
+        state.authType = null;
       })
 
       // Forgot Password Cases

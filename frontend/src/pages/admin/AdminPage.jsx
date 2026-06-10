@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import {
   getAdminIncidents,
   getAdminSummary,
@@ -22,6 +23,7 @@ import {
 } from '../../services/adminApi';
 import { setCurrentUser } from '../../services/authApi';
 import { logoutUser } from '../../store/authSlice';
+import { SEO } from '../../components/seo';
 
 const AdminTile = ({ label, value }) => (
   <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
@@ -127,6 +129,7 @@ const SidebarContent = ({
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -208,7 +211,7 @@ const AdminPage = () => {
 
     try {
       setIsLoggingOut(true);
-      await logoutUser();
+      await dispatch(logoutUser()).unwrap();
       setCurrentUser(null);
       navigate('/signin');
     } catch (logoutError) {
@@ -221,7 +224,13 @@ const AdminPage = () => {
   };
 
   return (
-    <main
+    <>
+      <SEO
+        title="Admin Console"
+        description="Private administrator console for Drishya Monitor OS users, incidents, and platform health."
+        noIndex
+      />
+      <main
       className="h-screen overflow-hidden bg-[#1E6BFF] font-sans text-slate-950"
       style={{
         backgroundImage:
@@ -429,9 +438,9 @@ const AdminPage = () => {
           </div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 
 export default AdminPage;
-

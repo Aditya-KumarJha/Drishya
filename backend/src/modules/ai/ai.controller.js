@@ -28,18 +28,3 @@ export const getAIInsights = async (req, res) => {
     res.status(500).json({ message: "AI failed" });
   }
 };
-
-//unused code for future use - to fetch AI timeline for a monitor
-// export const getAITimeline = async (req, res) => {
-//   try {
-//     const { monitorId } = req.params;
-
-//     const insights = await AIInsight.findById({ monitorId })
-//       .sort({ createdAt: -1 });
-
-//     res.json(insights);
-
-//   } catch (err) {
-//     res.status(500).json({ message: "Failed to fetch timeline" });
-//   }
-// };

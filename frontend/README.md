@@ -51,6 +51,7 @@ Update the API URLs if your backend is not running on the default local port:
 ```env
 VITE_API_BASE_URL=http://localhost:4000
 VITE_AUTH_API_URL=http://localhost:4000
+VITE_SITE_URL=http://localhost:5173
 ```
 
 Start the development server:
@@ -77,3 +78,11 @@ The frontend expects the backend API to be available and configured for CORS wit
 ## Deployment
 
 This app can be deployed to static hosting providers such as Vercel, Netlify, or Render Static Sites. Set the same `VITE_*` environment variables in the hosting dashboard before building.
+
+For Vercel production, set:
+
+```env
+VITE_API_BASE_URL=https://your-render-api.onrender.com
+VITE_AUTH_API_URL=https://your-render-api.onrender.com
+VITE_SITE_URL=https://your-frontend.vercel.app
+```

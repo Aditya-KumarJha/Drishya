@@ -6,11 +6,22 @@ const accessExpiry = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 const refreshExpiry = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const refreshSessionLockSeconds = Number(process.env.REFRESH_SESSION_LOCK_SECONDS || 5);
 
-const sameSitePolicy = (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase();
+const isProduction = process.env.NODE_ENV === 'production';
+const sameSitePolicy = (process.env.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax')).toLowerCase();
 const secureCookie =
   process.env.COOKIE_SECURE != null
     ? String(process.env.COOKIE_SECURE).toLowerCase() === 'true'
-    : process.env.NODE_ENV === 'production';
+    : isProduction || sameSitePolicy === 'none';
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
+const buildCookieOptions = (maxAge) => ({
+  httpOnly: true,
+  secure: secureCookie,
+  sameSite: sameSitePolicy,
+  path: '/',
+  ...(cookieDomain ? { domain: cookieDomain } : {}),
+  ...(maxAge ? { maxAge } : {}),
+});
 
 const buildBlacklistKey = (jti) => `bl:${jti}`;
 const buildRefreshSessionKey = (familyId) => `rt:${familyId}`;
@@ -52,19 +63,11 @@ const getExpirySeconds = (expiresInValue) => {
   return amount * unitSeconds;
 };
 
-const getAccessCookieOptions = () => ({
-  httpOnly: true,
-  secure: secureCookie,
-  sameSite: sameSitePolicy,
-  maxAge: getExpirySeconds(accessExpiry) * 1000,
-});
+const getAccessCookieOptions = () => buildCookieOptions(getExpirySeconds(accessExpiry) * 1000);
 
-const getRefreshCookieOptions = () => ({
-  httpOnly: true,
-  secure: secureCookie,
-  sameSite: sameSitePolicy,
-  maxAge: getExpirySeconds(refreshExpiry) * 1000,
-});
+const getRefreshCookieOptions = () => buildCookieOptions(getExpirySeconds(refreshExpiry) * 1000);
+
+const getClearCookieOptions = () => buildCookieOptions();
 
 const getRefreshExpirySeconds = () => getExpirySeconds(refreshExpiry);
 
@@ -114,6 +117,7 @@ export {
   getExpirySeconds,
   getAccessCookieOptions,
   getRefreshCookieOptions,
+  getClearCookieOptions,
   storeRefreshSession,
   getRefreshSessionJti,
   revokeRefreshSession,

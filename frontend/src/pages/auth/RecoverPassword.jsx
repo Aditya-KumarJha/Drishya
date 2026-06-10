@@ -7,6 +7,7 @@ import FormField from './FormField';
 import { useDispatch } from 'react-redux';
 import { forgotPassword, resendOtp, resetPassword, verifyForgotPasswordOtp } from '../../store/authSlice';
 import { toast } from 'react-toastify';
+import { SEO } from '../../components/seo';
 
 const RecoverPassword = () => {
   const navigate = useNavigate();
@@ -101,31 +102,37 @@ const RecoverPassword = () => {
     } 
 
   return (
-    <AuthLayout
-      eyebrow="Operator Security"
-      title={step === 1 ? 'Recover Access' : step === 2 ? 'Security Verification' : 'Set New Access Key'}
-      subtitle={
-        step === 1
-          ? 'Enter your operator email to receive the secure access recovery OTP.'
-          : step === 2
-          ? 'Enter the OTP sent to your email to verify your identity.'
-          : 'Keep the command center secure: update your credentials with a new secure password.'
-      }
-    >
-      <AuthPanel
-        footerHref="/signin"
-        footerLabel="Sign in"
-        footerText="Remember your password?"
-        icon={ShieldCheck}
-        onSubmit={handleSubmit}
-        title={getTitle()}
+    <>
+      <SEO
+        title="Recover Password"
+        description="Recover access to your Drishya Monitor OS account using secure OTP verification."
+        noIndex
+      />
+      <AuthLayout
+        eyebrow="Operator Security"
+        title={step === 1 ? 'Recover Access' : step === 2 ? 'Security Verification' : 'Set New Access Key'}
+        subtitle={
+          step === 1
+            ? 'Enter your operator email to receive the secure access recovery OTP.'
+            : step === 2
+            ? 'Enter the OTP sent to your email to verify your identity.'
+            : 'Keep the command center secure: update your credentials with a new secure password.'
+        }
       >
-        <div className="grid gap-4">
-          {error && (
-            <div className="rounded border-2 border-red-500 bg-red-50 p-3 text-sm font-bold text-red-700">
-              {error}
-            </div>
-          )}
+        <AuthPanel
+          footerHref="/signin"
+          footerLabel="Sign in"
+          footerText="Remember your password?"
+          icon={ShieldCheck}
+          onSubmit={handleSubmit}
+          title={getTitle()}
+        >
+          <div className="grid gap-4">
+            {error && (
+              <div className="rounded border-2 border-red-500 bg-red-50 p-3 text-sm font-bold text-red-700">
+                {error}
+              </div>
+            )}
 
         
           {step === 1 && (
@@ -208,9 +215,10 @@ const RecoverPassword = () => {
               className="transition-transform group-hover:translate-x-1"
             />
           </button>
-        </div>
-      </AuthPanel>
-    </AuthLayout>
+          </div>
+        </AuthPanel>
+      </AuthLayout>
+    </>
   );
 };
 

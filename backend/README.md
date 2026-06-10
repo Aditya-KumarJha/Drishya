@@ -94,6 +94,7 @@ MONGO_URI=mongodb://localhost:27017/drishya-auth
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=
+REDIS_URL=
 
 RABBITMQ_URL=amqp://localhost:5672
 RABBITMQ_PREFETCH=10
@@ -103,6 +104,7 @@ QUEUE_PREFIX=DRISHYA
 
 RESEND_API_KEY=
 EMAIL_FROM=no-reply@example.com
+ALERT_OVERRIDE_EMAIL=
 BRAND_NAME=Drishya
 BRAND_SUPPORT_EMAIL=support@example.com
 
@@ -110,6 +112,9 @@ JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
+COOKIE_SAME_SITE=lax
+COOKIE_SECURE=false
+COOKIE_DOMAIN=
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -122,6 +127,7 @@ PINECONE_API_KEY=
 PINECONE_INDEX_NAME=drishya
 PINECONE_TEXT_FIELD=chunk_text
 PINECONE_NAMESPACE_PREFIX=monitor-user
+VERCEL_PREVIEW_ORIGIN_PATTERN=
 ```
 
 ## API Overview
@@ -222,8 +228,10 @@ For production:
 - Use managed MongoDB, Redis, and RabbitMQ services.
 - Set secure JWT secrets.
 - Configure `COOKIE_SECURE=true` when serving over HTTPS.
-- Set `COOKIE_SAME_SITE` according to your frontend/backend hosting setup.
-- Set `CORS_ORIGIN` to the deployed frontend URL.
+- Use `COOKIE_SAME_SITE=none` for cross-site Render + Vercel cookie auth.
+- Leave `COOKIE_DOMAIN` empty unless the frontend and backend share the same parent domain.
+- Set `CORS_ORIGIN` to the deployed Vercel frontend URL, without a trailing slash.
+- Optionally set `VERCEL_PREVIEW_ORIGIN_PATTERN=^https://[a-z0-9-]+\\.vercel\\.app$` if preview deployments must call the API.
 - Configure provider keys for Resend, Groq, OAuth, and Pinecone as needed.
 
 ## License

@@ -1,8 +1,15 @@
 import { Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { AppSkeleton } from '../../App';
 import { getCurrentUser } from '../../services/authApi';
 
 const AdminRoute = ({ children }) => {
-  const user = getCurrentUser();
+  const { user: sessionUser, isInitialized } = useSelector((state) => state.auth);
+  const user = sessionUser || getCurrentUser();
+
+  if (!isInitialized) {
+    return <AppSkeleton />;
+  }
 
   if (!user) {
     return <Navigate to="/signin" replace />;
@@ -16,4 +23,3 @@ const AdminRoute = ({ children }) => {
 };
 
 export default AdminRoute;
-

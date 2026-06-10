@@ -12,10 +12,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-      <ToastContainer/>
         <App />
         <ToastContainer position="top-right" autoClose={2500} newestOnTop closeOnClick pauseOnFocusLoss />
       </BrowserRouter>
     </Provider>
   </StrictMode>,
-)
+);

@@ -9,39 +9,35 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import alertRoutes from "./modules/alert/alert.routes.js";
 import incidentRoutes from "./modules/incident/incident.routes.js";
+import { isOriginAllowed } from "./utils/origin.js";
 
 const app = express();
 
-// CORS Configuration
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173/")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+app.set("trust proxy", 1);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
 
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // Reject all other origins
     callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
-// Middleware
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 // Routes
 app.use("/auth", authRoutes);

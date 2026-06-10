@@ -3,6 +3,28 @@ import Incident from "../incident/incident.model.js";
 import { sendEmailAlert } from "./email.service.js";
 import AIInsight from "../ai/ai.model.js";
 import { alertQueue } from "../../queues/alert.queue.js";
+import Monitor from "../monitor/monitor.model.js";
+
+const AI_WAIT_ATTEMPTS = 5;
+const AI_WAIT_DELAY_MS = 2000;
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const findLatestAIInsight = (incidentId) =>
+  AIInsight.findOne({ incidentId }).sort({ createdAt: -1 });
+
+const waitForAIInsight = async (incidentId) => {
+  for (let attempt = 1; attempt <= AI_WAIT_ATTEMPTS; attempt += 1) {
+    const insight = await findLatestAIInsight(incidentId);
+    if (insight) return insight;
+
+    if (attempt < AI_WAIT_ATTEMPTS) {
+      await delay(AI_WAIT_DELAY_MS);
+    }
+  }
+
+  return null;
+};
 
 /**
  * Enqueue an alert job to BullMQ (called from incident processor).
@@ -37,12 +59,18 @@ export const processAlertJob = async ({ monitorId, incidentId }) => {
       return;
     }
 
-    const recipient = process.env.ALERT_TO_EMAIL || process.env.ALERT_EMAIL;
+    const monitor = await Monitor.findById(monitorId).populate("userId", "email fullName").lean();
+    if (!monitor) {
+      throw new Error(`Monitor ${monitorId} not found for alert`);
+    }
 
-    // 🧠 GET AI DATA
-    const ai = await AIInsight.findOne({
-      incidentId: incident._id,
-    }).sort({ createdAt: -1 });
+    const ownerEmail = monitor.userId?.email;
+    const recipient = process.env.ALERT_OVERRIDE_EMAIL || ownerEmail;
+    if (!recipient) {
+      throw new Error(`Monitor ${monitorId} owner email not found for alert`);
+    }
+
+    const ai = await waitForAIInsight(incident._id);
 
     // 🔥 SAFE SUGGESTION HANDLING
     const suggestions = Array.isArray(ai?.suggestion)
@@ -64,7 +92,8 @@ export const processAlertJob = async ({ monitorId, incidentId }) => {
     const message = `
 🚨 WEBSITE ALERT
 
-🔗 Monitor ID: ${incident.monitorId}
+🔗 Monitor: ${monitor.url}
+🆔 Monitor ID: ${incident.monitorId}
 ❌ Failures: ${incident.failCount}
 
 ${
@@ -94,6 +123,7 @@ ${formattedSuggestions}
     await Alert.create({
       monitorId,
       incidentId: incident._id,
+      recipientEmail: recipient,
       status: "SENT",
       message,
       ai: ai
@@ -113,6 +143,7 @@ ${formattedSuggestions}
     await Alert.create({
       monitorId,
       incidentId,
+      recipientEmail: null,
       status: "FAILED",
       message: err.message,
     });

@@ -19,6 +19,7 @@ import {
   getExpirySeconds,
   getAccessCookieOptions,
   getRefreshCookieOptions,
+  getClearCookieOptions,
   storeRefreshSession,
   getRefreshSessionJti,
   revokeRefreshSession,
@@ -26,6 +27,7 @@ import {
   releaseRefreshSessionLock,
 } from './services/token.service.js';
 import { logger } from './utils/logger.js';
+import { getPrimaryFrontendUrl } from '../../utils/origin.js';
 
 const REGISTRATION_TTL_SECONDS = Number(process.env.REGISTRATION_TTL_SECONDS || 900);
 const FORGOT_PASSWORD_VERIFIED_TTL_SECONDS = Number(
@@ -50,8 +52,8 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
 };
 
 const clearAuthCookies = (res) => {
-  res.clearCookie('access_token', getAccessCookieOptions());
-  res.clearCookie('refresh_token', getRefreshCookieOptions());
+  res.clearCookie('access_token', getClearCookieOptions());
+  res.clearCookie('refresh_token', getClearCookieOptions());
 };
 
 const buildOtpResponse = (message, otp) => {
@@ -131,7 +133,6 @@ const issueAuthSession = async (req, res, user) => {
 
 const registerUser = asyncHandler(async (req, res) => {
   const { email, password, fullName, username, provider = 'email' } = req.body;
-  console.log("HashChangeEvent",req.body)
   const normalizedEmail = normalizeEmail(email);
   const normalizedUsername = username ? normalizeUsername(username) : null;
 
@@ -438,7 +439,7 @@ const oauthCallback = (provider) =>
     const user = req.user;
     
     if (!user) {
-      return res.redirect(`${process.env.FRONTEND_URL || '/'}/login?error=oauth_failed`);
+      return res.redirect(`${getPrimaryFrontendUrl()}/signin?error=oauth_failed`);
     }
 
     await issueAuthSession(req, res, user);
@@ -452,9 +453,9 @@ const oauthCallback = (provider) =>
       });
     }
 
-    const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontend = getPrimaryFrontendUrl();
     return res.redirect(
-      `${frontend}/login?auth=success&provider=${encodeURIComponent(provider)}`
+      `${frontend}/signin?auth=success&provider=${encodeURIComponent(provider)}`
     );
   });
 

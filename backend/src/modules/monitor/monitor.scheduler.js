@@ -1,4 +1,3 @@
-import Monitor from './monitor.model.js';
 import { monitorQueue } from '../monitor/monitor.queue.js';
 import { getActiveMonitors } from "./monitor.service.js";
 
@@ -17,15 +16,7 @@ export const startScheduler = () => {
 
         const lastRun = lastRunMap.get(id) || 0;
 
-        // ✅ INTERVAL CONTROL
         if (now - lastRun >= monitor.interval) {
-          const job = {
-            monitorId: monitor._id,
-            url: monitor.url,
-            method: monitor.method,
-            createdAt: new Date(),
-          };
-
           await monitorQueue.add(
             'check-url',
             {
@@ -34,7 +25,7 @@ export const startScheduler = () => {
               method: monitor.method,
             },
             {
-              attempts: 3, // 🔥 retry built-in
+              attempts: 3,
               backoff: {
                 type: 'exponential',
                 delay: 2000,
@@ -52,8 +43,7 @@ export const startScheduler = () => {
     } catch (error) {
       console.error('❌ Scheduler error:', error.message);
     }
-  }, 5000); // every 5 sec (testing ke liye fast rakha hai)
+  }, 5000);
 };
 
-// 🔥 queue export karenge worker ke liye
 export const getQueue = () => monitorQueue;

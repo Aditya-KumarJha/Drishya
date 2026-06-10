@@ -61,6 +61,12 @@ Default local URLs:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:4000`
 
+Render + Vercel deployment notes:
+
+- Backend `CORS_ORIGIN` must include the deployed Vercel URL.
+- Backend production cookie auth should use `COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true`.
+- Frontend `VITE_API_BASE_URL`, `VITE_AUTH_API_URL`, and `VITE_SITE_URL` should point at the deployed Render API and Vercel frontend URLs.
+
 ## Environment Files
 
 Each app has its own example environment file:

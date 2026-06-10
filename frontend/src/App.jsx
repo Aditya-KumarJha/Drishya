@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { checkAuthUser } from './store/authSlice';
 
 // Core Components (Non-lazy for stability)
@@ -62,7 +62,6 @@ const App = () => {
         <Route path="/signup" element={<ProtectedRoute><SignUpPage /></ProtectedRoute>} />
         <Route path="/reset-password" element={<RecoverPassword />} />
         
-        {/* Dashboard Routes */}
         <Route path="/dashboard" element={<Navigate to="/dashboard/overview" replace />} />
         <Route
           path="/dashboard/:view"
@@ -73,7 +72,6 @@ const App = () => {
           }
         />
 
-        {/* Admin Routes */}
         <Route
           path="/admin"
           element={
@@ -85,7 +83,6 @@ const App = () => {
           }
         />
 
-        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

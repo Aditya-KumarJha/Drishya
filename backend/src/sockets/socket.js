@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import { buildAllowedOrigins, isOriginAllowed } from "../utils/origin.js";
 
 let io = null;
 
@@ -7,14 +8,15 @@ let io = null;
  * Call this once from server.js after creating the HTTP server.
  */
 export const initSocket = (httpServer) => {
-  const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
   io = new Server(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (isOriginAllowed(origin)) {
+          return callback(null, true);
+        }
+
+        return callback(new Error("Socket origin not allowed"));
+      },
       credentials: true,
     },
     transports: ["websocket", "polling"],
@@ -50,7 +52,7 @@ export const initSocket = (httpServer) => {
     });
   });
 
-  console.log("🟢 Socket.IO initialized");
+  console.log(`Socket.IO initialized for origins: ${buildAllowedOrigins().join(", ")}`);
   return io;
 };
 

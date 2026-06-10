@@ -26,9 +26,9 @@ import {
 } from './validators/auth.validator.js';
 import { authenticate } from './auth.middleware.js';
 import { authRateLimiter, otpRateLimiter } from './middlewares/rate-limit.middleware.js';
+import { getPrimaryFrontendUrl } from '../../utils/origin.js';
 
 const router = express.Router();
-const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 router.use(passport.initialize());
 
@@ -83,7 +83,7 @@ router.get(
       if (err) return next(err);
       if (!user) {
         return res.redirect(
-          `${frontend}/signin?error=${encodeURIComponent(info?.message || 'Google sign-in failed')}`
+          `${getPrimaryFrontendUrl()}/signin?error=${encodeURIComponent(info?.message || 'Google sign-in failed')}`
         );
       }
 
@@ -120,7 +120,7 @@ router.get(
       if (err) return next(err);
       if (!user) {
         return res.redirect(
-          `${frontend}/signin?error=${encodeURIComponent(info?.message || 'GitHub sign-in failed')}`
+          `${getPrimaryFrontendUrl()}/signin?error=${encodeURIComponent(info?.message || 'GitHub sign-in failed')}`
         );
       }
 
@@ -144,7 +144,7 @@ router.get('/oauth-failure', (req, res) => {
       'No Google account found for this user. If you registered using GitHub or email/password, try logging in with that method or sign up with Google.';
   }
 
-  return res.redirect(`${frontend}/signin?error=${encodeURIComponent(message)}`);
+  return res.redirect(`${getPrimaryFrontendUrl()}/signin?error=${encodeURIComponent(message)}`);
 });
 
 router.post('/logout', authenticate, logout);

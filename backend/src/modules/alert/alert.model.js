@@ -18,6 +18,7 @@ const alertSchema = new mongoose.Schema({
     type: String,
     enum: ["SENT", "FAILED"],
   },
+  recipientEmail: String,
   message: String,
 
    ai: {
