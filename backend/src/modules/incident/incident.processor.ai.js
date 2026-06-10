@@ -1,8 +1,9 @@
 import { Queue } from "bullmq";
 import { connection } from "../../config/redis.js";
+import { withBullmqOptions } from "../../config/bullmq.js";
 import { buildMonitorInsight } from "../ai/ai.service.js";
 
-const aiQueue = new Queue("ai-queue", { connection });
+const aiQueue = new Queue("ai-queue", withBullmqOptions({ connection }));
 
 /**
  * Enqueue AI processing for an incident.

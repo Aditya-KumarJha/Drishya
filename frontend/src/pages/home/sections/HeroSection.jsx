@@ -31,14 +31,14 @@ const HeroSection = () => {
 
       <header className="absolute left-0 top-0 z-30 w-full px-2.5 py-2.5 sm:px-5 sm:py-3 lg:px-8">
         <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center gap-2 rounded-[1.1rem] border-[3px] border-black bg-white/[0.94] px-2.5 py-1.5 text-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] backdrop-blur sm:gap-3 sm:rounded-[1.35rem] sm:px-3 sm:py-2 md:grid-cols-[1fr_auto_1fr] md:px-4">
-          <a href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="Drishyam home">
+          <a href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="Drishya home">
             <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border-[3px] border-black bg-[#FFD600] font-[900] italic shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:h-11 sm:w-11 sm:rounded-2xl">
               <span className="absolute inset-x-0 top-0 h-2 bg-[#00E676] border-b-[3px] border-black" />
               D
             </span>
             <span className="hidden min-w-0 sm:block">
               <span className="block truncate text-lg font-[900] uppercase italic leading-none tracking-normal sm:text-xl">
-                Drishyam
+                Drishya
               </span>
               <span className="mt-1 hidden truncate text-[9px] font-black uppercase tracking-[0.18em] text-black/55 sm:block">
                 AI incident command

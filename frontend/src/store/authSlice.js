@@ -194,6 +194,11 @@ const authSlice = createSlice({
     setUserEmail: (state, action) => {
       state.userEmail = action.payload;
     },
+    setAuthUser: (state, action) => {
+      state.user = action.payload;
+      state.isAuthenticated = Boolean(action.payload);
+      state.isInitialized = true;
+    },
     resetAuthState: (state) => {
       state.isOtpRequired = false;
       state.userEmail = null;
@@ -366,5 +371,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUserEmail, resetAuthState } = authSlice.actions;
+export const { setAuthUser, setUserEmail, resetAuthState } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, RefreshCcw, Signal } from 'lucide-react';
-import { getPublicStatus } from '../../../services/statusApi';
+import { getPublicProjectStatus, getPublicStatus } from '../../../services/statusApi';
 import { formatInterval } from '../dashboardUtils';
 
 const getMonitorState = (monitor, analytics) => {
@@ -56,10 +56,13 @@ const StatusPagesSection = ({
   isLoadingSummary,
   monitors,
   onRefresh,
+  projects = [],
   summary,
   summaryError,
+  uptimeReports = {},
 }) => {
   const [publicStatusBySlug, setPublicStatusBySlug] = useState({});
+  const [projectStatusBySlug, setProjectStatusBySlug] = useState({});
 
   useEffect(() => {
     const publicMonitors = monitors.filter((monitor) => monitor.publicStatusEnabled && monitor.publicSlug);
@@ -87,6 +90,33 @@ const StatusPagesSection = ({
       active = false;
     };
   }, [monitors]);
+
+  useEffect(() => {
+    const publicProjects = projects.filter((project) => project.publicStatusEnabled !== false && project.publicSlug);
+    if (!publicProjects.length) {
+      setProjectStatusBySlug({});
+      return undefined;
+    }
+
+    let active = true;
+    Promise.allSettled(publicProjects.map((project) => getPublicProjectStatus(project.publicSlug)))
+      .then((results) => {
+        if (!active) return;
+
+        const nextStatus = {};
+        results.forEach((result, index) => {
+          const slug = publicProjects[index].publicSlug;
+          nextStatus[slug] = result.status === 'fulfilled'
+            ? { ok: true, payload: result.value }
+            : { ok: false, error: result.reason?.message || 'Project status unavailable' };
+        });
+        setProjectStatusBySlug(nextStatus);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [projects]);
 
   return (
   <section className="grid min-w-0 gap-5">
@@ -119,7 +149,50 @@ const StatusPagesSection = ({
         <SummaryCard icon={AlertTriangle} label="Open incidents" value={summary?.activeIncidents ?? '-'} tone="bg-[#FFD600] text-black" />
         <SummaryCard icon={CheckCircle2} label="Global uptime" value={summary?.uptime != null ? `${summary.uptime}%` : '-'} tone="bg-[#00E676] text-black" />
       </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {['24h', '7d', '30d'].map((range) => (
+          <div key={range} className="rounded-xl border-2 border-black bg-[#FDFBF7] px-3 py-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">SLA {range}</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{uptimeReports[range]?.uptime ?? '-'}%</p>
+            <p className="mt-1 text-[11px] font-bold text-slate-500">{uptimeReports[range]?.totalChecks ?? 0} checks</p>
+          </div>
+        ))}
+      </div>
     </div>
+
+    {projects.length > 0 && (
+      <div className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-[6px_6px_0_#0F172A]">
+        <h3 className="font-black text-slate-950">Project status pages</h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {projects.map((project) => {
+            const projectStatus = project.publicSlug ? projectStatusBySlug[project.publicSlug] : null;
+            return (
+              <div key={project._id || project.id} className="rounded-xl border-2 border-black bg-[#FDFBF7] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-black text-slate-950">{project.name}</p>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-black ${projectStatus?.ok ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-white text-slate-500'}`}>
+                    {projectStatus?.ok ? `${projectStatus.payload.uptime}%` : 'Checking'}
+                  </span>
+                </div>
+                {project.publicStatusEnabled !== false && project.publicSlug ? (
+                  <a
+                    href={`${apiBaseUrl}/status/project/${project.publicSlug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block break-all text-sm font-black text-[#1E6BFF] underline decoration-[3px] underline-offset-4"
+                  >
+                    {apiBaseUrl}/status/project/{project.publicSlug}
+                  </a>
+                ) : (
+                  <p className="mt-2 text-sm font-black text-slate-500">Public project status disabled</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
 
     <div className="grid min-w-0 gap-4 xl:grid-cols-2">
       {monitors.length === 0 ? (

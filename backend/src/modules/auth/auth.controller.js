@@ -28,6 +28,7 @@ import {
 } from './services/token.service.js';
 import { logger } from './utils/logger.js';
 import { getPrimaryFrontendUrl } from '../../utils/origin.js';
+import { uploadProfileImage } from './services/imagekit.service.js';
 
 const REGISTRATION_TTL_SECONDS = Number(process.env.REGISTRATION_TTL_SECONDS || 900);
 const FORGOT_PASSWORD_VERIFIED_TTL_SECONDS = Number(
@@ -78,6 +79,8 @@ const buildUserResponse = (user) => ({
   provider: user.provider || 'email',
   isVerified: user.isVerified !== false,
   profilePic: user.profilePic || '',
+  credits: user.credits ?? 0,
+  creditsUsed: user.creditsUsed ?? 0,
 });
 
 const getIdentifierFromBody = (body) => {
@@ -201,15 +204,20 @@ const verifyRegisterOTP = asyncHandler(async (req, res) => {
   }
 
   const registrationData = JSON.parse(rawRegistration);
-  const user = await User.create({
+  const userPayload = {
     email: registrationData.email,
-    username: registrationData.username || null,
     passwordHash: registrationData.passwordHash,
     fullName: registrationData.fullName,
     provider: registrationData.provider || 'email',
     isVerified: true,
     role: 'user',
-  });
+  };
+
+  if (registrationData.username) {
+    userPayload.username = registrationData.username;
+  }
+
+  const user = await User.create(userPayload);
 
   await redis.del(registrationKey);
 
@@ -568,6 +576,66 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   });
 });
 
+const updateProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  if (req.body.fullName !== undefined) {
+    if (typeof req.body.fullName === 'string') {
+      const parts = req.body.fullName.trim().split(/\s+/).filter(Boolean);
+      user.fullName = {
+        firstName: parts[0] || user.fullName.firstName,
+        lastName: parts.slice(1).join(' ') || user.fullName.lastName || 'User',
+      };
+    } else if (req.body.fullName && typeof req.body.fullName === 'object') {
+      user.fullName = {
+        firstName: String(req.body.fullName.firstName || user.fullName.firstName).trim(),
+        lastName: String(req.body.fullName.lastName || user.fullName.lastName || 'User').trim(),
+      };
+    }
+  }
+
+  if (req.body.username !== undefined) {
+    const nextUsername = normalizeUsername(req.body.username);
+    if (nextUsername) {
+      if (!/^[a-z0-9_]{3,20}$/.test(nextUsername)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username must be 3-20 characters and use letters, numbers, or underscore',
+        });
+      }
+      const existing = await User.findOne({
+        username: nextUsername,
+        _id: { $ne: user._id },
+      }).select('_id');
+      if (existing) {
+        return res.status(409).json({ success: false, message: 'Username already taken' });
+      }
+      user.username = nextUsername;
+    } else {
+      user.username = undefined;
+    }
+  }
+
+  if (req.body.profileImage) {
+    user.profilePic = await uploadProfileImage({
+      userId: user._id.toString(),
+      image: req.body.profileImage,
+    });
+  } else if (req.body.profilePic && /^https?:\/\//i.test(req.body.profilePic)) {
+    user.profilePic = req.body.profilePic;
+  }
+
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    user: buildUserResponse(user),
+  });
+});
+
 export {
   registerUser,
   verifyRegisterOTP,
@@ -581,4 +649,5 @@ export {
   logout,
   refreshToken,
   getCurrentUser,
+  updateProfile,
 };

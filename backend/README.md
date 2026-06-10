@@ -1,120 +1,61 @@
-# Smart Monitoring Web Platform - Backend
+# Drishya Backend
 
-Node.js backend for website uptime monitoring, incident detection, real-time dashboard data, AI-assisted reliability insights, authentication, and notification delivery.
+Express backend for Drishya monitoring. It provides authentication, monitor scheduling, raw logs, incidents, alerts, reports, billing, profile upload, AI chat, Socket.IO, and worker processes.
 
 ## Tech Stack
 
-- Node.js and Express 5
-- MongoDB with Mongoose
-- Redis with BullMQ for monitor and alert jobs
-- RabbitMQ for notification message processing
-- Socket.IO for real-time updates
-- JWT, HTTP-only cookies, Passport, Google OAuth, and GitHub OAuth
-- Groq for AI insight generation
-- Pinecone for optional AI insight memory
-- Resend for email notifications
-- Zod and express-validator for validation
+- Node.js + Express 5
+- MongoDB + Mongoose
+- Redis + BullMQ
+- RabbitMQ
+- Socket.IO
+- Resend
+- Groq
+- Pinecone
+- Razorpay
+- ImageKit
+- Passport Google/GitHub OAuth
+- JWT access/refresh cookies
 
-## Project Structure
-
-```text
-backend/
-|-- server.js
-|-- package.json
-|-- ARCHITECTURE.md
-`-- src/
-    |-- app.js
-    |-- config/
-    |-- modules/
-    |   |-- admin/
-    |   |-- ai/
-    |   |-- alert/
-    |   |-- auth/
-    |   |-- dashboard/
-    |   |-- incident/
-    |   |-- logs/
-    |   |-- monitor/
-    |   `-- notification/
-    |-- queues/
-    |-- sockets/
-    |-- utils/
-    `-- workers/
-```
-
-## Getting Started
-
-Install dependencies:
+## Setup
 
 ```bash
+cd backend
 npm install
-```
-
-Create a local environment file:
-
-```bash
 cp .env.example .env
-```
-
-Start the API in development:
-
-```bash
 npm run dev
 ```
 
-Start the API in production mode:
+`npm run dev` starts the API and all local workers from `server.js`.
 
-```bash
-npm start
-```
-
-The server defaults to `http://localhost:4000`.
-
-## Required Services
-
-- MongoDB for application data
-- Redis for BullMQ queues
-- RabbitMQ for notification queue processing
-- Resend for outbound email
-- Groq for AI insight generation
-- Pinecone if you want AI insight memory and retrieval
-
-## Environment Variables
-
-Use `backend/.env.example` as the source of truth. Important variables include:
+## Environment
 
 ```env
 NODE_ENV=development
-PORT=4000
-BACKEND_URL=http://localhost:4000
+PORT=3000
+BACKEND_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173
 
 MONGO_URI=mongodb://localhost:27017/drishya-auth
 
+REDIS_URL=
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_URL=
+BULLMQ_SKIP_VERSION_CHECK=true
 
 RABBITMQ_URL=amqp://localhost:5672
-RABBITMQ_PREFETCH=10
-RABBITMQ_MAX_RETRIES=5
-RABBITMQ_RETRY_BASE_DELAY_MS=5000
 QUEUE_PREFIX=DRISHYA
 
 RESEND_API_KEY=
-EMAIL_FROM=no-reply@example.com
+EMAIL_FROM=Drishya <no-reply@example.com>
+ALERT_FAILURE_THRESHOLD=1
 ALERT_OVERRIDE_EMAIL=
-BRAND_NAME=Drishya
-BRAND_SUPPORT_EMAIL=support@example.com
 
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-COOKIE_SAME_SITE=
-COOKIE_SECURE=
-COOKIE_DOMAIN=
+COOKIE_SAME_SITE=lax
+COOKIE_SECURE=false
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -127,113 +68,119 @@ PINECONE_API_KEY=
 PINECONE_INDEX_NAME=drishya
 PINECONE_TEXT_FIELD=chunk_text
 PINECONE_NAMESPACE_PREFIX=monitor-user
-VERCEL_PREVIEW_ORIGIN_PATTERN=
+
+RZP_KEY_ID=
+RZP_KEY_SECRET=
+
+IMAGEKIT_PUBLIC_KEY=
+IMAGEKIT_PRIVATE_KEY=
+IMAGEKIT_PROFILE_FOLDER=/drishya/profiles
+
+CHECK_CREDIT_COST=1
 ```
 
-## API Overview
-
-The backend mounts routes directly from the API root:
-
-| Area | Base path | Purpose |
-| --- | --- | --- |
-| Auth | `/auth` | Register, login, OTP verification, refresh token, OAuth, current user, logout |
-| Monitors | `/monitors` | Create, list, update, and delete user monitors |
-| Logs | `/logs` | Monitor check logs and analytics |
-| Dashboard | `/dashboard` | Dashboard summary, analytics, incidents, and AI data |
-| Incidents | `/incidents` | Incident records and status data |
-| Alerts | `/alerts` | Alert records and alert actions |
-| AI | `/ai` | Monitor insights |
-| Admin | `/admin` | Admin-only platform data |
-
-Health check:
-
-```bash
-curl http://localhost:4000/
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok",
-  "message": "Smart Monitoring API is running",
-  "timestamp": "2026-01-01T00:00:00.000Z"
-}
-```
-
-## Auth Flow
-
-The auth module supports:
-
-- Email/password registration
-- Register OTP verification
-- Login OTP verification
-- Forgot-password OTP verification
-- JWT access and refresh tokens
-- HTTP-only cookie sessions
-- Google OAuth
-- GitHub OAuth
-- Role checks for admin endpoints
-
-Common endpoints:
+## Structure
 
 ```text
-POST /auth/register
-POST /auth/verify-register-otp
-POST /auth/login
-POST /auth/verify-login-otp
-POST /auth/forgot-password
-POST /auth/verify-forgot-password-otp
-POST /auth/reset-password
-POST /auth/refresh
-GET  /auth/me
-POST /auth/logout
-GET  /auth/google
-GET  /auth/github
+backend/
+|-- server.js                       # Boot, DB connect, workers, graceful shutdown
+|-- src/app.js                      # Express app, CORS, route mounts
+|-- src/config/
+|   |-- redis.js                    # ioredis connection
+|   |-- bullmq.js                   # BullMQ option helper
+|   `-- validateEnv.js              # startup env checks
+|-- src/modules/
+|   |-- auth/                       # users, OTP, OAuth, profile, ImageKit
+|   |-- monitor/                    # monitor schema, validation, scheduler, queue
+|   |-- logs/                       # raw logs and analytics
+|   |-- incident/                   # incident create/resolve and AI trigger
+|   |-- alert/                      # alert queue and alert records
+|   |-- notification/               # RabbitMQ event email listener
+|   |-- ai/                         # structured incident insight
+|   |-- chat/                       # AI chat, saved conversations, Pinecone memory
+|   |-- billing/                    # credits, Razorpay order/verify, usage charging
+|   |-- report/                     # SLA, timeline, PDF/CSV/email report
+|   |-- status/                     # public status endpoints
+|   |-- project/                    # monitor projects/groups
+|   |-- dashboard/                  # dashboard summaries
+|   `-- admin/                      # admin endpoints
+|-- src/queues/                     # alert queue connection
+|-- src/sockets/                    # Socket.IO room/event helpers
+`-- src/workers/                    # monitor, alert, AI workers
 ```
+
+## API Map
+
+| Path | Purpose |
+| --- | --- |
+| `/auth` | Register, OTP, login, refresh, OAuth, profile |
+| `/monitors` | Create/list/update/delete monitors |
+| `/projects` | Project/group metadata |
+| `/logs` | Raw check logs and analytics |
+| `/dashboard` | Summary and incident data |
+| `/incidents` | Incident records |
+| `/alerts` | Alert history |
+| `/reports` | Uptime reports, incident timeline, postmortem, CSV/PDF/email |
+| `/status` | Public monitor/project status |
+| `/billing` | Credits, plans, Razorpay order/verify |
+| `/chat` | AI chat conversations |
+| `/ai` | AI insight reads |
+| `/admin` | Admin-only views |
 
 ## Monitoring Flow
 
-1. A user creates a monitor through `/monitors`.
-2. `monitor.scheduler.js` scans active monitors.
-3. Due checks are pushed into BullMQ.
-4. `monitor.worker.js` performs the HTTP check.
-5. Results are saved as logs.
-6. The incident processor opens or resolves incidents based on failures.
-7. AI and alert workers process insights and notifications when needed.
+1. `POST /monitors` validates input and creates a monitor.
+2. `monitor.service.js` queues an immediate first check.
+3. `monitor.scheduler.js` scans active monitors every 5 seconds and queues due checks.
+4. Redis locks prevent duplicate queueing across multiple backend instances.
+5. `monitor.worker.js` runs HTTP, SSL, and DNS checks.
+6. Logs are saved in MongoDB.
+7. Successful checks reset failure counters.
+8. Failed checks increment Redis failure counters.
+9. Once `ALERT_FAILURE_THRESHOLD` is reached, an incident is created.
+10. Incident creation triggers AI processing, alert queueing, RabbitMQ events, Socket.IO, and email notification.
 
-## AI Insights
+## Billing Flow
 
-The AI module builds a metrics snapshot from recent logs, active incident state, latency trend, failure rate, and optional Pinecone memory. It requests a structured JSON insight from Groq and validates it with the local schema before saving it.
+1. New users receive default credits.
+2. Active monitor checks deduct credits once per monitor per hour.
+3. Paused or deleted monitors are not charged.
+4. If credits are exhausted, active monitors are paused.
+5. Frontend requests `/billing/orders`.
+6. Razorpay collects payment.
+7. Frontend posts payment signature to `/billing/verify`.
+8. Backend verifies HMAC using `RZP_KEY_SECRET`.
+9. Credits are added only after successful verification.
 
-If Groq is not configured or generation fails, the backend falls back to a deterministic local insight so the dashboard can still show useful guidance.
+## Alert Flow
 
-## Notifications
+Alerts are incident-based. A single failed raw log does not necessarily mean an alert unless the failure threshold is reached. For demos, set:
 
-The notification module uses RabbitMQ for durable delivery and retry handling. Email delivery is handled through Resend. Failed RabbitMQ messages are retried with delay and then moved to a dead-letter queue after the configured retry limit.
-
-## Useful Commands
-
-```bash
-npm run dev      # Start with nodemon
-npm start        # Start with node
-npm run build    # No build step required
+```env
+ALERT_FAILURE_THRESHOLD=1
 ```
 
-## Deployment Notes
+Recipients are:
 
-For production:
+1. Monitor `notificationEmails`
+2. Owner email
+3. Or `ALERT_OVERRIDE_EMAIL` if configured
 
-- Set `NODE_ENV=production`.
-- Use managed MongoDB, Redis, and RabbitMQ services.
-- Set secure JWT secrets.
-- Configure `COOKIE_SECURE=true` when serving over HTTPS.
-- Use `COOKIE_SAME_SITE=none` for cross-site Render + Vercel cookie auth.
-- Leave `COOKIE_DOMAIN` empty unless the frontend and backend share the same parent domain.
-- Set `CORS_ORIGIN` to the deployed Vercel frontend URL, without a trailing slash.
-- Optionally set `VERCEL_PREVIEW_ORIGIN_PATTERN=^https://[a-z0-9-]+\\.vercel\\.app$` if preview deployments must call the API.
-- Configure provider keys for Resend, Groq, OAuth, and Pinecone as needed.
+## Commands
 
-## License
+```bash
+npm run dev      # nodemon server.js
+npm start        # node server.js
+npm run build    # no compile step
+```
 
-ISC. See the root `LICENSE` file.
+## Production Notes
+
+- Use strong JWT secrets.
+- Set `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=none` for Vercel + Render cross-site auth.
+- Keep `COOKIE_DOMAIN` empty unless both apps share a parent domain.
+- Use Redis `noeviction` where possible.
+- Set `BULLMQ_SKIP_VERSION_CHECK=true` if hosted Redis warning spam is noisy.
+- Configure Render health checks against `/`.
+- Keep workers in the same process only for simple deployments; for heavy production traffic, split API and workers into separate Render services.
+

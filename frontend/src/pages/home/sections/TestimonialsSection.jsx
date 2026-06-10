@@ -7,7 +7,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const testimonials = [
   {
-    quote: 'Drishyam gave us the exact service, impact, and likely cause before the war room even filled up.',
+    quote: 'Drishya gave us the exact service, impact, and likely cause before the war room even filled up.',
     name: 'Aarav Mehta',
     role: 'SRE Lead',
     company: 'FinOps Cloud',

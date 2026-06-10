@@ -36,16 +36,16 @@ export const SidebarContent = ({ activeView, compact = false, onClose, onOpen, o
       <div className={`flex items-center ${compact ? 'justify-center' : 'justify-between gap-3'}`}>
         <button
           type="button"
-          onClick={compact ? onOpen : undefined}
-          className={`flex min-w-0 items-center gap-3 ${compact ? 'justify-center' : 'cursor-default'}`}
-          aria-label={compact ? 'Open sidebar' : 'Drishyam Monitor OS'}
+          onClick={compact ? onOpen : () => navigate('/')}
+          className={`flex min-w-0 items-center gap-3 ${compact ? 'justify-center' : 'cursor-pointer'}`}
+          aria-label={compact ? 'Open sidebar' : 'Drishya Monitor OS'}
         >
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-[3px] border-black bg-[#FFD600] font-black italic text-black shadow-[4px_4px_0_#0F172A] cursor-pointer active:shadow-[1px_2px_0_#0F172A] active:scale-95">
             D
           </span>
           {!compact && (
             <span className="min-w-0 text-black line-clamp-1">
-              <span className="block truncate text-lg font-black uppercase italic leading-none">Drishyam</span>
+              <span className="block truncate text-lg font-black uppercase italic leading-none">Drishya</span>
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-black/55">Monitor OS</span>
             </span>
           )}
@@ -112,7 +112,7 @@ export const SidebarContent = ({ activeView, compact = false, onClose, onOpen, o
 };
 
 export const MobileNav = ({ activeView, onViewChange }) => (
-  <nav className="fixed bottom-3 left-3 right-3 z-40 grid grid-cols-5 gap-1 rounded-2xl border-[3px] border-black bg-white p-1.5 shadow-[5px_5px_0_#0F172A] lg:hidden">
+  <nav className="fixed bottom-3 left-3 right-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border-[3px] border-black bg-white p-1.5 shadow-[5px_5px_0_#0F172A] sm:grid-cols-8 lg:hidden">
     {navItems.map(({ id, label, icon: Icon }) => (
       <button
         key={id}

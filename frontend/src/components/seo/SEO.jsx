@@ -116,8 +116,8 @@ const SEO = ({
       description: DEFAULT_DESCRIPTION,
       offers: {
         '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'USD',
+        price: '199',
+        priceCurrency: 'INR',
       },
     };
 

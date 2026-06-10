@@ -16,7 +16,19 @@ const SettingCard = ({ icon: Icon, label, value, note }) => (
   </article>
 );
 
-const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMonitors, monitors, onCreate, onEdit, onRefresh, pausedCount }) => (
+const SettingsSection = ({
+  activeCount,
+  apiBaseUrl,
+  averageInterval,
+  isLoadingMonitors,
+  monitors,
+  onCreate,
+  onCreateProject,
+  onEdit,
+  onRefresh,
+  pausedCount,
+  projects = [],
+}) => (
   <section className="grid min-w-0 gap-5">
     <div className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-[6px_6px_0_#0F172A]">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
@@ -80,7 +92,30 @@ const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMo
         >
           New monitor
         </button>
+        <button
+          type="button"
+          onClick={onCreateProject}
+          className="rounded-xl border-[3px] border-black bg-[#BFE8FF] px-4 py-2 text-sm font-black text-black shadow-[3px_3px_0_#0F172A] hover:bg-[#FFD600]"
+        >
+          New project
+        </button>
       </div>
+
+      {projects.length > 0 && (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {projects.map((project) => (
+            <div key={project._id || project.id} className="rounded-xl border-2 border-black bg-white p-3">
+              <p className="font-black text-slate-950">{project.name}</p>
+              <p className="mt-1 text-xs font-bold text-slate-500">{project.monitorCount || 0} monitors</p>
+              {project.publicSlug && (
+                <p className="mt-2 break-all text-xs font-black text-[#1E6BFF]">
+                  {apiBaseUrl}/status/project/{project.publicSlug}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-3">
         {monitors.length === 0 ? (
@@ -103,6 +138,18 @@ const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMo
                   </span>
                   <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
                     Public {monitor.publicStatusEnabled ? 'enabled' : 'off'}
+                  </span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    Checks {monitor.checkTypes?.join('+') || 'HTTP'}
+                  </span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    Group {monitor.groupName || 'Default'}
+                  </span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    SSL {monitor.sslDaysRemaining == null ? 'not checked' : `${monitor.sslDaysRemaining}d`}
+                  </span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    DNS {monitor.dnsResolvedAddresses?.length ? monitor.dnsResolvedAddresses.join(', ') : 'not checked'}
                   </span>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
 import { connection } from "../config/redis.js";
+import { withBullmqOptions } from "../config/bullmq.js";
 import { buildMonitorInsight } from "../modules/ai/ai.service.js";
 
 export const startAIWorker = () => {
@@ -16,10 +17,10 @@ export const startAIWorker = () => {
         forceRefresh: true,
       });
     },
-    {
+    withBullmqOptions({
       connection,
       concurrency: 2,
-    }
+    })
   );
 
   worker.on("completed", (job) => {
@@ -31,4 +32,5 @@ export const startAIWorker = () => {
   });
 
   console.log("🟢 AI Worker started...");
+  return worker;
 };

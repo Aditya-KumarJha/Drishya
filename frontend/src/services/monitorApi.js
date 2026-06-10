@@ -22,6 +22,8 @@ export const mapMonitor = (monitor) => {
   return {
     id,
     name: hostname,
+    projectId: monitor.projectId || '',
+    groupName: monitor.groupName || 'Default',
     url: monitor.url,
     method: monitor.method || 'GET',
     interval: monitor.interval || 60000,
@@ -31,6 +33,12 @@ export const mapMonitor = (monitor) => {
     body: monitor.body || '',
     responseKeyword: monitor.responseKeyword || '',
     notificationEmails: Array.isArray(monitor.notificationEmails) ? monitor.notificationEmails : [],
+    checkTypes: Array.isArray(monitor.checkTypes) && monitor.checkTypes.length ? monitor.checkTypes : ['HTTP'],
+    regions: Array.isArray(monitor.regions) && monitor.regions.length ? monitor.regions : ['primary'],
+    cronExpression: monitor.cronExpression || '',
+    sslDaysRemaining: monitor.sslDaysRemaining,
+    sslExpiresAt: monitor.sslExpiresAt,
+    dnsResolvedAddresses: Array.isArray(monitor.dnsResolvedAddresses) ? monitor.dnsResolvedAddresses : [],
     publicSlug: monitor.publicSlug || '',
     publicStatusEnabled: monitor.publicStatusEnabled !== false,
     lastStatus: monitor.lastStatus || 'PENDING',
@@ -63,6 +71,8 @@ export const getMonitors = async () => {
  * POST /monitors
  */
 const buildMonitorPayload = (data) => ({
+  projectId: data.projectId || null,
+  groupName: data.groupName || 'Default',
   url: data.url,
   method: data.method,
   interval: Number(data.interval),
@@ -76,6 +86,13 @@ const buildMonitorPayload = (data) => ({
   headers: data.headers || {},
   body: data.body || '',
   responseKeyword: data.responseKeyword || '',
+  checkTypes: Array.isArray(data.checkTypes)
+    ? data.checkTypes
+    : String(data.checkTypes || 'HTTP').split(',').map((item) => item.trim()).filter(Boolean),
+  regions: Array.isArray(data.regions)
+    ? data.regions
+    : String(data.regions || 'primary').split(',').map((item) => item.trim()).filter(Boolean),
+  cronExpression: data.cronExpression || '',
   notificationEmails: Array.isArray(data.notificationEmails)
     ? data.notificationEmails
     : String(data.notificationEmails || '')

@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
 import { connection } from "../config/redis.js";
+import { withBullmqOptions } from "../config/bullmq.js";
 import { processAlertJob } from "../modules/alert/alert.service.js";
 
 export const startAlertWorker = () => {
@@ -10,10 +11,10 @@ export const startAlertWorker = () => {
       console.log(`🔔 Processing alert for monitor ${monitorId}`);
       await processAlertJob({ monitorId, incidentId });
     },
-    {
+    withBullmqOptions({
       connection,
       concurrency: 3,
-    }
+    })
   );
 
   worker.on("completed", (job) => {
@@ -25,4 +26,5 @@ export const startAlertWorker = () => {
   });
 
   console.log("🟢 Alert Worker started...");
+  return worker;
 };

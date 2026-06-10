@@ -13,3 +13,8 @@ export const setCurrentUser = (user) => {
     localStorage.removeItem('user');
   }
 };
+
+export const updateProfile = async (payload) => {
+  const { data } = await axiosInstance.put('/auth/profile', payload);
+  return data?.user || data?.data?.user || data;
+};

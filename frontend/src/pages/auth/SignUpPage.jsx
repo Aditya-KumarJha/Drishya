@@ -26,6 +26,7 @@ const SignUpPage = () => {
     const firstName = formData.get('firstname')?.trim();
     const lastName = formData.get('lastname')?.trim();
     const email = formData.get('email')?.trim().toLowerCase();
+    const username = formData.get('username')?.trim().toLowerCase();
     const password = formData.get('password');
 
     const payload = {
@@ -34,7 +35,8 @@ const SignUpPage = () => {
       fullName: {
         firstName,
         lastName,
-      }
+      },
+      ...(username ? { username } : {}),
     };
 
     try {
@@ -98,6 +100,7 @@ if (isOtpRequired) {
             </div>
 
             <FormField autoComplete="email" icon={Mail} label="Email" name="email" placeholder="you@example.com" type="email" />
+            <FormField autoComplete="username" icon={UserRoundPlus} label="Username" name="username" placeholder="optional_handle" />
             
             <FormField
               autoComplete="new-password"

@@ -81,6 +81,7 @@ const MonitorDialog = ({
   isSaving,
   mode,
   onClose,
+  projects = [],
   onSubmit,
   onUpdate,
 }) => {
@@ -107,6 +108,34 @@ const MonitorDialog = ({
         </div>
 
         <form className="grid gap-5 p-4 sm:p-6" onSubmit={onSubmit}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Project</span>
+              <select
+                value={form.projectId}
+                onChange={(event) => onUpdate('projectId', event.target.value)}
+                className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+              >
+                <option value="">No project</option>
+                {projects.map((project) => (
+                  <option key={project._id || project.id} value={project._id || project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Group</span>
+              <input
+                value={form.groupName}
+                onChange={(event) => onUpdate('groupName', event.target.value)}
+                className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+                placeholder="Core APIs"
+              />
+            </label>
+          </div>
+
           <label className="grid gap-1.5">
             <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">URL</span>
             <input
@@ -182,6 +211,48 @@ const MonitorDialog = ({
               placeholder="healthy"
             />
           </label>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {['HTTP', 'SSL', 'DNS'].map((type) => (
+              <label key={type} className="flex items-center justify-between gap-3 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 py-3">
+                <span className="text-sm font-black text-slate-700">{type} check</span>
+                <input
+                  type="checkbox"
+                  checked={form.checkTypes?.includes(type)}
+                  onChange={(event) => {
+                    const current = form.checkTypes || [];
+                    const next = event.target.checked
+                      ? [...new Set([...current, type])]
+                      : current.filter((item) => item !== type);
+                    onUpdate('checkTypes', next.length ? next : ['HTTP']);
+                  }}
+                  className="h-5 w-5 accent-[#1E6BFF]"
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Regions</span>
+              <input
+                value={form.regionsText}
+                onChange={(event) => onUpdate('regionsText', event.target.value)}
+                className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+                placeholder="primary, us-east"
+              />
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Cron expression</span>
+              <input
+                value={form.cronExpression}
+                onChange={(event) => onUpdate('cronExpression', event.target.value)}
+                className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+                placeholder="*/5 * * * *"
+              />
+            </label>
+          </div>
 
           <label className="grid gap-1.5">
             <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Headers JSON</span>

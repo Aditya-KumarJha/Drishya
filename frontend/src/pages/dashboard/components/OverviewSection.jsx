@@ -112,8 +112,51 @@ const LogCoverageChart = ({ analyticsByMonitorId, monitors }) => {
   );
 };
 
-const OverviewSection = ({ activeCount, analyticsByMonitorId = {}, averageInterval, monitors, onViewMonitors, pausedCount, totalCount }) => (
+const OverviewSection = ({
+  activeCount,
+  analyticsByMonitorId = {},
+  averageInterval,
+  billing,
+  monitors,
+  onEditProfile,
+  onViewMonitors,
+  pausedCount,
+  totalCount,
+  user,
+}) => (
   <>
+    <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <article className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border-[3px] border-black bg-[#FFD600] text-2xl font-black">
+              {user?.profilePic ? <img src={user.profilePic} alt="" className="h-full w-full object-cover" /> : (user?.fullName?.firstName?.[0] || 'D')}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-[#1E6BFF]">Operator profile</p>
+              <h2 className="truncate text-xl font-black text-slate-950">
+                {[user?.fullName?.firstName, user?.fullName?.lastName].filter(Boolean).join(' ') || 'Drishya user'}
+              </h2>
+              <p className="mt-1 text-sm font-bold text-slate-500">{user?.username ? `@${user.username}` : 'No username set'}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onEditProfile}
+            className="rounded-xl border-[3px] border-black bg-[#BFE8FF] px-4 py-2 text-sm font-black text-black shadow-[3px_3px_0_#0F172A] hover:bg-[#FFD600]"
+          >
+            Edit profile
+          </button>
+        </div>
+      </article>
+
+      <article className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
+        <p className="text-sm font-black text-slate-500">Credits balance</p>
+        <div className="mt-3 text-3xl font-black text-slate-950">{billing?.credits ?? user?.credits ?? 0}</div>
+        <p className="mt-1 text-sm font-bold text-slate-500">Used {billing?.creditsUsed ?? user?.creditsUsed ?? 0} credits</p>
+      </article>
+    </section>
+
     <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
       {[
         ['Total monitors', totalCount, 'Stored in backend', Signal, 'text-emerald-700', 'bg-[#00E676]'],

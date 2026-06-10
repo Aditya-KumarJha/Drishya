@@ -1,4 +1,4 @@
-import { subscribeToQueue } from "./rabbitmq.broker.js";
+import { close as closeRabbit, subscribeToQueue } from "./rabbitmq.broker.js";
 import { sendEmail } from "../email.resend.js";
 
 const QUEUE_PREFIX = process.env.QUEUE_PREFIX || "DRISHYA";
@@ -12,6 +12,8 @@ const QUEUES = {
   MONITOR_DOWN: `${QUEUE_PREFIX}.MONITOR.DOWN`,
   MONITOR_RECOVERED: `${QUEUE_PREFIX}.MONITOR.RECOVERED`,
   INCIDENT_CREATED: `${QUEUE_PREFIX}.INCIDENT.CREATED`,
+  CREDITS_PURCHASED: `${QUEUE_PREFIX}.CREDITS.PURCHASED`,
+  CREDITS_EXHAUSTED: `${QUEUE_PREFIX}.CREDITS.EXHAUSTED`,
 };
 
 const buildOtpTemplate = ({ otp, purpose, ttlMinutes }) => {
@@ -281,5 +283,40 @@ export async function startNotificationListeners() {
     );
   });
 
-  return Promise.all(subscriptions);
+  register(QUEUES.CREDITS_PURCHASED, async (data) => {
+    const customerName = `${data.fullName?.firstName || ""} ${data.fullName?.lastName || ""}`.trim();
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#111827;border:3px solid #111827;padding:24px;background:#f8fbff">
+        <h1 style="margin:0 0 12px;color:#1E6BFF;">${BRAND_NAME} credits added</h1>
+        <p>Hi <strong>${customerName || "there"}</strong>, your credit pack is active.</p>
+        <table style="width:100%;border-collapse:collapse;margin:18px 0;background:#fff">
+          <tr><td style="padding:10px;border:1px solid #ddd;"><strong>Plan</strong></td><td style="padding:10px;border:1px solid #ddd;">${data.planName}</td></tr>
+          <tr><td style="padding:10px;border:1px solid #ddd;"><strong>Amount</strong></td><td style="padding:10px;border:1px solid #ddd;">₹${data.amountInr}</td></tr>
+          <tr><td style="padding:10px;border:1px solid #ddd;"><strong>Credits added</strong></td><td style="padding:10px;border:1px solid #ddd;">${data.credits}</td></tr>
+          <tr><td style="padding:10px;border:1px solid #ddd;"><strong>New balance</strong></td><td style="padding:10px;border:1px solid #ddd;">${data.balanceAfter}</td></tr>
+        </table>
+        <p>Active monitor checks will continue deducting credits only while monitors are active.</p>
+      </div>
+    `;
+    await sendEmail(data.email, `${BRAND_NAME} credits added`, `₹${data.amountInr} credit pack added`, html);
+  });
+
+  register(QUEUES.CREDITS_EXHAUSTED, async (data) => {
+    const customerName = `${data.fullName?.firstName || ""} ${data.fullName?.lastName || ""}`.trim();
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#111827;border:3px solid #111827;padding:24px;background:#fff7ed">
+        <h1 style="margin:0 0 12px;color:#dc2626;">Credits exhausted</h1>
+        <p>Hi <strong>${customerName || "there"}</strong>, your ${BRAND_NAME} credits are exhausted.</p>
+        <p>We paused active monitors to avoid running unpaid checks. Last attempted monitor:</p>
+        <p style="font-weight:700;word-break:break-all;">${data.monitorUrl || "Monitor check"}</p>
+        <p>Purchase credits from the billing section to resume monitoring.</p>
+      </div>
+    `;
+    await sendEmail(data.email, `${BRAND_NAME} credits exhausted`, "Your active monitors were paused", html);
+  });
+
+  await Promise.all(subscriptions);
+  return {
+    close: closeRabbit,
+  };
 }

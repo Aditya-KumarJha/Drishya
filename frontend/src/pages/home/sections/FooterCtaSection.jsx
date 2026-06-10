@@ -29,7 +29,7 @@ const footerGroups = [
     title: 'CORE',
     kicker: 'Company signal',
     links: [
-      { label: 'About', note: 'Why Drishyam exists' },
+      { label: 'About', note: 'Why Drishya exists' },
       { label: 'Careers', note: 'Build calmer on-call tools' },
       { label: 'Contact', note: 'Reach the team directly' },
     ],
@@ -175,13 +175,13 @@ const FooterCtaSection = ({ className = '' }) => {
         <div className="footer-nav grid gap-12 sm:gap-10 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.05fr_1fr_1fr_1fr] mt-12 md:mt-24">
           <div className="space-y-6 lg:pr-6">
             <div className="bg-black text-white p-4 inline-block transform -skew-x-12 border-4 border-white shadow-[8px_8px_0px_0px_rgba(0,230,118,1)]">
-              <h3 className="text-2xl md:text-3xl font-black italic uppercase leading-none tracking-tighter">DRISHYAM</h3>
+              <h3 className="text-2xl md:text-3xl font-black italic uppercase leading-none tracking-tighter">DRISHYA</h3>
             </div>
             <p className="max-w-xs text-xs md:text-sm font-black uppercase italic leading-tight text-white">
               Production monitoring that turns alert noise into a readable incident trail.
             </p>
             <div className="flex gap-3">
-              <IconTileLink className="bg-white text-black" label="Email Drishyam">
+              <IconTileLink className="bg-white text-black" label="Email Drishya">
                 <Mail className="h-4.5 w-4.5 md:h-5 md:w-5" strokeWidth={3} />
               </IconTileLink>
               <IconTileLink className="bg-[#FFD600] text-black" label="Developer resources">

@@ -13,6 +13,7 @@ import {
   logout,
   refreshToken,
   getCurrentUser,
+  updateProfile,
 } from './auth.controller.js';
 import {
   registerUserValidations,
@@ -151,5 +152,6 @@ router.post('/logout', authenticate, logout);
 router.post('/refresh', refreshToken);
 router.post('/refresh-token', refreshToken);
 router.get('/me', authenticate, getCurrentUser);
+router.put('/profile', authenticate, updateProfile);
 
 export default router;

@@ -1,42 +1,70 @@
 import { useLayoutEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getCurrentUser } from '../../../services/authApi';
+import { openCreditCheckout } from '../../../services/razorpayCheckout';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const plans = [
   {
-    name: 'Signal Desk',
-    price: '$29',
-    cadence: 'monitor / month',
-    note: 'For small surfaces that need clean signal.',
+    id: 'starter',
+    name: 'Starter',
+    price: '₹199',
+    cadence: '5,000 credits',
+    note: 'For small uptime checks and early projects.',
     tint: 'bg-[#E8F6FF]',
     accent: 'bg-[#BFE8FF]',
-    includes: ['Uptime checks', 'Latency alerts', '7 day history'],
+    includes: ['Active check billing', 'Email alerts', 'Raw logs'],
   },
   {
-    name: 'War Room',
-    price: '$99',
-    cadence: 'service / month',
-    note: 'For teams that need context before the call starts.',
+    id: 'growth',
+    name: 'Growth',
+    price: '₹499',
+    cadence: '15,000 credits',
+    note: 'For active products and API monitoring.',
     tint: 'bg-[#EFFFF5]',
     accent: 'bg-[#00E676]',
-    includes: ['Trace map', 'RCA timeline', 'Noise scoring'],
+    includes: ['API assertions', 'AI chat memory', 'SLA reports'],
   },
   {
-    name: 'Autopilot RCA',
-    price: 'Custom',
-    cadence: 'production scale',
-    note: 'For high-traffic systems with private workflows.',
+    id: 'scale',
+    name: 'Scale',
+    price: '₹999',
+    cadence: '40,000 credits',
+    note: 'For production teams with many services.',
     tint: 'bg-[#FFF7BF]',
     accent: 'bg-[#FFD600]',
-    includes: ['Runbook actions', 'Private integrations', 'Priority support'],
+    includes: ['SSL/DNS checks', 'Incident exports', 'Project status pages'],
   },
 ];
 
 const PricingSection = ({ className = '' }) => {
+  const navigate = useNavigate();
   const sectionRef = useRef(null);
   const cardRefs = useRef([]);
+
+  const handleSelectPlan = (plan) => {
+    const user = getCurrentUser();
+
+    if (!user) {
+      toast.info('Sign in first to purchase credits');
+      navigate('/signin');
+      return;
+    }
+
+    openCreditCheckout({
+      planId: plan.id,
+      user,
+      onSuccess: () => toast.success('Credits added after payment verification'),
+    }).catch((error) => {
+      if (error.message !== 'Payment cancelled') {
+        toast.error(error.message || 'Failed to complete payment');
+      }
+    });
+  };
 
   useLayoutEffect(() => {
     const cards = cardRefs.current.filter(Boolean);
@@ -109,7 +137,11 @@ const PricingSection = ({ className = '' }) => {
               ))}
             </ul>
 
-            <button className="mt-5 border border-[#1E6BFF] bg-[#1E6BFF] px-3 py-3 text-left font-black uppercase italic tracking-[0.12em] text-white transition-colors hover:bg-[#08256B]">
+            <button
+              type="button"
+              onClick={() => handleSelectPlan(plan)}
+              className="mt-5 border border-[#1E6BFF] bg-[#1E6BFF] px-3 py-3 text-left font-black uppercase italic tracking-[0.12em] text-white transition-colors hover:bg-[#08256B]"
+            >
               Select plan
             </button>
           </article>

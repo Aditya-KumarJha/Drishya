@@ -10,6 +10,10 @@ import adminRoutes from "./modules/admin/admin.routes.js";
 import alertRoutes from "./modules/alert/alert.routes.js";
 import incidentRoutes from "./modules/incident/incident.routes.js";
 import statusRoutes from "./modules/status/status.routes.js";
+import projectRoutes from "./modules/project/project.routes.js";
+import reportRoutes from "./modules/report/report.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
+import billingRoutes from "./modules/billing/billing.routes.js";
 import { isOriginAllowed } from "./utils/origin.js";
 
 const app = express();
@@ -38,7 +42,7 @@ app.use((req, res, next) => {
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "4mb" }));
 
 // Routes
 app.use("/auth", authRoutes);
@@ -50,6 +54,10 @@ app.use("/admin", adminRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/incidents", incidentRoutes);
 app.use("/status", statusRoutes);
+app.use("/projects", projectRoutes);
+app.use("/reports", reportRoutes);
+app.use("/chat", chatRoutes);
+app.use("/billing", billingRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {

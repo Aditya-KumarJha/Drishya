@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import {
-  ArrowLeft, BrainCircuit, Lightbulb, RefreshCcw, TrendingUp
+  ArrowLeft, BrainCircuit, Download, Lightbulb, Mail, RefreshCcw, TrendingUp
 } from 'lucide-react';
 import UplotLineChart from '../../../components/charts/UplotLineChart';
 import { getMonitorLogs } from '../../../services/logApi';
+import { emailIncidentReport, getIncidentExportUrl, getIncidentPostmortem, getIncidentTimeline } from '../../../services/reportApi';
 
 // --- HELPERS ---
 const getHealthStyle = (analytics) => {
@@ -20,6 +22,17 @@ const MetricTile = ({ label, value, tone = 'bg-[#FDFBF7]' }) => (
 );
 
 const formatDateTime = (v) => v ? new Date(v).toLocaleString([], { day: '2-digit', hour: '2-digit', minute: '2-digit', month: 'short' }) : '-';
+
+const downloadCsv = (filename, rows) => {
+  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const csv = rows.map((row) => row.map(escape).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
 // --- DETAILED COMPONENTS (BACK TO FULL POWER) ---
 
@@ -144,20 +157,48 @@ const RawLogsTable = ({ monitorId }) => {
     };
   }, [monitorId]);
 
+  const exportLogs = () => {
+    downloadCsv(`monitor-${monitorId}-logs.csv`, [
+      ['Time', 'Check', 'Region', 'State', 'Status', 'Latency', 'Error'],
+      ...logs.map((log) => [
+        formatDateTime(log.checkedAt || log.createdAt),
+        log.checkType || 'HTTP',
+        log.region || 'primary',
+        log.success ? 'UP' : 'DOWN',
+        log.status || '-',
+        `${log.responseTime || 0}ms`,
+        log.error || '-',
+      ]),
+    ]);
+  };
+
   return (
     <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-sm font-black uppercase italic">Raw check logs</h3>
-        <span className="rounded-lg border-2 border-black bg-[#FDFBF7] px-2 py-1 text-[10px] font-black">
-          {isLoading ? 'LOADING' : `${logs.length} ROWS`}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={exportLogs}
+            disabled={!logs.length}
+            className="inline-flex items-center gap-1 rounded-lg border-2 border-black bg-[#FFD600] px-2 py-1 text-[10px] font-black disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download size={13} strokeWidth={3} />
+            Excel CSV
+          </button>
+          <span className="rounded-lg border-2 border-black bg-[#FDFBF7] px-2 py-1 text-[10px] font-black">
+            {isLoading ? 'LOADING' : `${logs.length} ROWS`}
+          </span>
+        </div>
       </div>
       {error && <div className="mb-3 rounded-xl border-2 border-red-400 bg-red-50 p-3 text-sm font-black text-red-700">{error}</div>}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] text-left text-sm">
+      <div className="max-h-[360px] overflow-auto">
+        <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
             <tr>
               <th className="border-b-2 border-slate-200 px-3 py-2">Time</th>
+              <th className="border-b-2 border-slate-200 px-3 py-2">Check</th>
+              <th className="border-b-2 border-slate-200 px-3 py-2">Region</th>
               <th className="border-b-2 border-slate-200 px-3 py-2">State</th>
               <th className="border-b-2 border-slate-200 px-3 py-2">Status</th>
               <th className="border-b-2 border-slate-200 px-3 py-2">Latency</th>
@@ -168,6 +209,8 @@ const RawLogsTable = ({ monitorId }) => {
             {logs.map((log) => (
               <tr key={log._id || log.id}>
                 <td className="border-b border-slate-100 px-3 py-2 font-bold">{formatDateTime(log.checkedAt || log.createdAt)}</td>
+                <td className="border-b border-slate-100 px-3 py-2 font-black">{log.checkType || 'HTTP'}</td>
+                <td className="border-b border-slate-100 px-3 py-2 font-bold text-slate-500">{log.region || 'primary'}</td>
                 <td className="border-b border-slate-100 px-3 py-2">
                   <span className={`rounded-full border px-2 py-1 text-[10px] font-black ${log.success ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-red-300 bg-red-50 text-red-700'}`}>
                     {log.success ? 'UP' : 'DOWN'}
@@ -180,11 +223,128 @@ const RawLogsTable = ({ monitorId }) => {
             ))}
             {!isLoading && logs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center font-black text-slate-400">No raw logs yet</td>
+                <td colSpan={7} className="px-3 py-8 text-center font-black text-slate-400">No raw logs yet</td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+};
+
+const LogInterpretationPanel = ({ analytics }) => {
+  const failures = analytics?.failures || 0;
+  const total = analytics?.totalChecks || 0;
+  const avgLatency = analytics?.avgLatency || 0;
+  const uptime = Number(analytics?.uptime || 0);
+
+  const rows = [
+    ['Signal', total ? `${failures} failed of ${total} checks` : 'No check logs yet'],
+    ['Reliability', total ? `${uptime}% uptime in selected window` : 'Waiting for first scheduler run'],
+    ['Latency', total ? `${avgLatency}ms average latency` : 'Not enough samples'],
+    ['Likely action', failures ? 'Open the raw rows, inspect status/error, and confirm timeout/status expectations.' : 'Service is currently passing checks in the latest sample.'],
+  ];
+
+  return (
+    <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
+      <h3 className="text-sm font-black uppercase italic">AI log interpretation</h3>
+      <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+        Generated from the latest monitor telemetry so you can read raw checks without guessing what matters.
+      </p>
+      <div className="mt-4 overflow-hidden rounded-xl border-2 border-black">
+        <table className="w-full text-left text-sm">
+          <tbody>
+            {rows.map(([label, value]) => (
+              <tr key={label} className="border-b border-slate-200 last:border-b-0">
+                <th className="w-44 bg-[#BFE8FF] px-3 py-3 text-xs font-black uppercase text-slate-950">{label}</th>
+                <td className="px-3 py-3 font-bold text-slate-700">{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {failures > 0 && (
+        <div className="mt-4 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">
+          If failures are intermittent, alerts only trigger when the failure threshold is reached. This is now configurable with ALERT_FAILURE_THRESHOLD.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const IncidentTimelinePanel = ({ incidentId }) => {
+  const [timeline, setTimeline] = useState([]);
+  const [postmortem, setPostmortem] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!incidentId) return;
+    let active = true;
+    setError('');
+    Promise.all([getIncidentTimeline(incidentId), getIncidentPostmortem(incidentId)])
+      .then(([events, report]) => {
+        if (!active) return;
+        setTimeline(events);
+        setPostmortem(report);
+      })
+      .catch((err) => {
+        if (active) setError(err.message || 'Failed to load incident timeline');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [incidentId]);
+
+  if (!incidentId) {
+    return <div className="rounded-xl border-2 border-dashed border-slate-300 bg-[#FDFBF7] p-6 text-sm font-bold text-slate-500">No active incident timeline for this monitor.</div>;
+  }
+
+  const sendReportEmail = () => {
+    emailIncidentReport(incidentId)
+      .then(() => toast.success('Incident report sent to your email'))
+      .catch((err) => toast.error(err.message || 'Failed to email report'));
+  };
+
+  return (
+    <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-sm font-black uppercase italic">Incident timeline</h3>
+        <div className="flex items-center gap-2">
+          <a href={getIncidentExportUrl(incidentId, 'csv')} className="rounded-xl border-[3px] border-black bg-[#FFD600] px-3 py-2 text-xs font-black text-black shadow-[3px_3px_0_#0F172A]">CSV</a>
+          <a href={getIncidentExportUrl(incidentId, 'pdf')} className="rounded-xl border-[3px] border-black bg-[#BFE8FF] px-3 py-2 text-xs font-black text-black shadow-[3px_3px_0_#0F172A]">PDF</a>
+          <button
+            type="button"
+            onClick={sendReportEmail}
+            className="inline-flex items-center gap-1 rounded-xl border-[3px] border-black bg-[#00E676] px-3 py-2 text-xs font-black text-black shadow-[3px_3px_0_#0F172A]"
+          >
+            <Mail size={14} strokeWidth={3} />
+            Email
+          </button>
+        </div>
+      </div>
+      {error && <div className="mt-3 rounded-xl border-2 border-red-400 bg-red-50 p-3 text-sm font-black text-red-700">{error}</div>}
+      {postmortem && (
+        <div className="mt-4 rounded-xl border-2 border-black bg-[#FDFBF7] p-4">
+          <p className="text-[11px] font-black uppercase text-slate-500">AI postmortem</p>
+          <p className="mt-2 text-sm font-black text-slate-950">{postmortem.summary}</p>
+          <p className="mt-2 text-sm font-bold text-slate-600">{postmortem.rootCause}</p>
+        </div>
+      )}
+      <div className="mt-4 grid gap-3">
+        {timeline.map((event, index) => (
+          <div key={`${event.type}-${event.at}-${index}`} className="grid gap-1 rounded-xl border-2 border-black bg-white px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-black text-slate-950">{event.label}</p>
+              <span className="text-[10px] font-black uppercase text-slate-400">{formatDateTime(event.at)}</span>
+            </div>
+            <p className="text-sm font-bold text-slate-500">{event.detail}</p>
+          </div>
+        ))}
+        {timeline.length === 0 && !error && (
+          <p className="rounded-xl border-2 border-dashed border-slate-300 bg-[#FDFBF7] p-4 text-sm font-black text-slate-400">Timeline will appear after incident events are recorded.</p>
+        )}
       </div>
     </div>
   );
@@ -259,9 +419,17 @@ const IncidentsSection = ({
           </div>
         </div>
 
-        {/* Deep AI Analysis (Full Detail) */}
-        <RawLogsTable monitorId={selectedMonitor.id} />
-        <AIInsightPanel insight={insight} incident={incident} />
+        {showLogsFirst ? (
+          <>
+            <RawLogsTable monitorId={selectedMonitor.id} />
+            <LogInterpretationPanel analytics={analytics} />
+          </>
+        ) : (
+          <>
+            <IncidentTimelinePanel incidentId={incident?._id || incident?.id} />
+            <AIInsightPanel insight={insight} incident={incident} />
+          </>
+        )}
       </section>
     );
   }
@@ -272,7 +440,7 @@ const IncidentsSection = ({
       {/* Header remain same as list... */}
       <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-xl font-black uppercase italic">{showLogsFirst ? 'Monitor Logs' : 'Fleet Health'}</h2>
+          <h2 className="text-xl font-black uppercase italic">{showLogsFirst ? 'Raw Monitor Logs' : 'Incident Center'}</h2>
           <button onClick={onRefresh} className="flex items-center gap-2 rounded-xl border-[3px] border-black bg-[#FFD600] px-4 py-2 text-xs font-black shadow-[3px_3px_0_#000]">
             <RefreshCcw size={14} strokeWidth={3} /> REFRESH
           </button>
@@ -299,7 +467,7 @@ const IncidentsSection = ({
                </div>
                <div className="flex items-center justify-between mt-4 border-t-2 border-dashed pt-3 text-[10px] font-black text-slate-500 uppercase">
                   <span>Success: {a?.uptime || 0}%</span>
-                  <span className="text-blue-600 group-hover:underline">Deep Analysis →</span>
+                  <span className="text-blue-600 group-hover:underline">{showLogsFirst ? 'View logs →' : 'Deep Analysis →'}</span>
                </div>
             </div>
           );

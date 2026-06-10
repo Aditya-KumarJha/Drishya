@@ -4,13 +4,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import IncidentsSection from './components/IncidentsSection';
+import AIChatSection from './components/AIChatSection';
 import AlertsSection from './components/AlertsSection';
 import MonitorDialog from './components/MonitorDialog';
 import MonitorsSection from './components/MonitorsSection';
 import { MobileNav, SidebarContent } from './components/Navigation';
 import OverviewSection from './components/OverviewSection';
+import PricingSection from './components/PricingSection';
 import SettingsSection from './components/SettingsSection';
 import StatusPagesSection from './components/StatusPagesSection';
+import ProfileDialog from './components/ProfileDialog';
 import { emptyMonitorForm, navItems } from './dashboardData';
 import { getApiBaseUrl } from '../../services/dashboardApi';
 import {
@@ -30,6 +33,7 @@ import {
   toggleMonitorRecord,
   updateMonitorRecord,
 } from '../../store/dashboardSlice';
+import { setAuthUser } from '../../store/authSlice';
 import {
   selectAnalyticsByMonitorId,
   selectAIInsightsByMonitorId,
@@ -41,6 +45,11 @@ import {
   selectMonitors,
 } from '../../store/dashboardSelectors';
 import { SEO } from '../../components/seo';
+import { setCurrentUser, updateProfile } from '../../services/authApi';
+import { getBillingSummary } from '../../services/billingApi';
+import { openCreditCheckout } from '../../services/razorpayCheckout';
+import { createProject, getProjects } from '../../services/projectApi';
+import { getUptimeReport } from '../../services/reportApi';
 
 const DashboardPage = () => {
   const dispatch = useDispatch();
@@ -53,6 +62,13 @@ const DashboardPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [createForm, setCreateForm] = useState(emptyMonitorForm);
   const [editForm, setEditForm] = useState(emptyMonitorForm);
+  const [projects, setProjects] = useState([]);
+  const [projectError, setProjectError] = useState('');
+  const [uptimeReports, setUptimeReports] = useState({});
+  const [billing, setBilling] = useState(null);
+  const [purchasingPlanId, setPurchasingPlanId] = useState('');
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const {
@@ -71,6 +87,7 @@ const DashboardPage = () => {
     monitorError,
   } = useSelector(selectDashboard);
   const monitors = useSelector(selectMonitors);
+  const authUser = useSelector((state) => state.auth.user);
   const analyticsByMonitorId = useSelector(selectAnalyticsByMonitorId);
   const aiInsightsByMonitorId = useSelector(selectAIInsightsByMonitorId);
   const incidentsByMonitorId = useSelector(selectIncidentsByMonitorId);
@@ -132,6 +149,29 @@ const DashboardPage = () => {
     return () => window.clearTimeout(refreshTimer);
   }, [dispatch]);
 
+  const loadProjects = useCallback(() => {
+    setProjectError('');
+    getProjects()
+      .then(setProjects)
+      .catch((error) => setProjectError(error.message || 'Failed to load projects'));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadProjects, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadProjects]);
+
+  const loadBilling = useCallback(() => {
+    getBillingSummary()
+      .then(setBilling)
+      .catch((error) => toast.error(error.message || 'Failed to load credits'));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadBilling, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadBilling]);
+
   const loadAnalytics = useCallback(() => {
     dispatch(fetchAnalytics());
   }, [dispatch]);
@@ -171,6 +211,12 @@ const DashboardPage = () => {
     dispatch(fetchDashboardSummary());
   }, [dispatch]);
 
+  const loadUptimeReports = useCallback(() => {
+    Promise.all(['24h', '7d', '30d'].map((range) => getUptimeReport({ range }).then((report) => [range, report])))
+      .then((entries) => setUptimeReports(Object.fromEntries(entries)))
+      .catch((error) => toast.error(error.message || 'Failed to load uptime reports'));
+  }, []);
+
   useEffect(() => {
     if (activeView === 'status' || activeView === 'settings') {
       const summaryTimer = window.setTimeout(loadDashboardSummary, 0);
@@ -178,6 +224,13 @@ const DashboardPage = () => {
       return () => window.clearTimeout(summaryTimer);
     }
   }, [activeView, loadDashboardSummary]);
+
+  useEffect(() => {
+    if (activeView === 'status') {
+      const reportTimer = window.setTimeout(loadUptimeReports, 0);
+      return () => window.clearTimeout(reportTimer);
+    }
+  }, [activeView, loadUptimeReports]);
 
   const activeNavItem = navItems.find((item) => item.id === activeView);
 
@@ -194,6 +247,8 @@ const DashboardPage = () => {
   const refreshStatusPages = () => {
     loadDashboardSummary();
     loadAnalytics();
+    loadProjects();
+    loadUptimeReports();
   };
 
   const refreshIncidents = () => {
@@ -229,9 +284,50 @@ const DashboardPage = () => {
     return {
       ...form,
       headers,
+      regions: form.regionsText,
       expectedStatusCodes: form.expectedStatusCodes,
       notificationEmails: form.notificationEmailsText,
     };
+  };
+
+  const createDefaultProject = () => {
+    createProject({ name: 'Production', description: 'Primary production services' })
+      .then((project) => {
+        setProjects((current) => [project, ...current]);
+        toast.success('Project created');
+      })
+      .catch((error) => toast.error(error.message || 'Failed to create project'));
+  };
+
+  const saveProfile = (payload) => {
+    setIsSavingProfile(true);
+    updateProfile(payload)
+      .then((user) => {
+        setCurrentUser(user);
+        setProfileDialogOpen(false);
+        toast.success('Profile updated');
+        dispatch(setAuthUser(user));
+      })
+      .catch((error) => toast.error(error.response?.data?.message || error.message || 'Failed to update profile'))
+      .finally(() => setIsSavingProfile(false));
+  };
+
+  const buyCredits = (planId) => {
+    setPurchasingPlanId(planId);
+    openCreditCheckout({
+      planId,
+      user: authUser,
+      onSuccess: (summary) => {
+        setBilling(summary);
+        toast.success('Credits added after payment verification');
+      },
+    })
+      .catch((error) => {
+        if (error.message !== 'Payment cancelled') {
+          toast.error(error.message || 'Failed to complete payment');
+        }
+      })
+      .finally(() => setPurchasingPlanId(''));
   };
 
   const handleCreateSubmit = (event) => {
@@ -271,6 +367,8 @@ const DashboardPage = () => {
   const editMonitor = (monitor) => {
     setEditingId(monitor.id);
     setEditForm({
+      projectId: monitor.projectId || '',
+      groupName: monitor.groupName || 'Default',
       url: monitor.url,
       method: monitor.method,
       interval: String(monitor.interval),
@@ -281,6 +379,9 @@ const DashboardPage = () => {
         : '',
       body: monitor.body || '',
       responseKeyword: monitor.responseKeyword || '',
+      checkTypes: monitor.checkTypes || ['HTTP'],
+      regionsText: monitor.regions?.join(', ') || 'primary',
+      cronExpression: monitor.cronExpression || '',
       notificationEmailsText: monitor.notificationEmails?.join(', ') || '',
       publicStatusEnabled: monitor.publicStatusEnabled !== false,
       active: monitor.active,
@@ -394,16 +495,24 @@ const DashboardPage = () => {
                   {monitorError}
                 </div>
               )}
+              {projectError && (
+                <div className="rounded-2xl border-[3px] border-black bg-red-50 p-4 text-sm font-black text-red-700 shadow-[4px_4px_0_#0F172A]">
+                  {projectError}
+                </div>
+              )}
 
               {activeView === 'overview' && (
                 <OverviewSection
                   activeCount={activeCount}
                   analyticsByMonitorId={analyticsByMonitorId}
                   averageInterval={averageInterval}
+                  billing={billing}
                   monitors={monitors}
+                  onEditProfile={() => setProfileDialogOpen(true)}
                   onViewMonitors={() => selectView('monitors')}
                   pausedCount={pausedCount}
                   totalCount={monitors.length}
+                  user={authUser}
                 />
               )}
 
@@ -459,6 +568,10 @@ const DashboardPage = () => {
                 />
               )}
 
+              {activeView === 'chat' && (
+                <AIChatSection monitors={monitors} />
+              )}
+
               {activeView === 'status' && (
                 <StatusPagesSection
                   analyticsByMonitorId={analyticsByMonitorId}
@@ -467,8 +580,18 @@ const DashboardPage = () => {
                   monitors={monitors}
                   onRefresh={refreshStatusPages}
                   apiBaseUrl={getApiBaseUrl()}
+                  projects={projects}
                   summary={dashboardSummary}
                   summaryError={dashboardSummaryError || analyticsError}
+                  uptimeReports={uptimeReports}
+                />
+              )}
+
+              {activeView === 'pricing' && (
+                <PricingSection
+                  billing={billing}
+                  isPurchasing={purchasingPlanId}
+                  onPurchase={buyCredits}
                 />
               )}
 
@@ -480,9 +603,11 @@ const DashboardPage = () => {
                   isLoadingMonitors={isLoadingMonitors}
                   monitors={monitors}
                   onCreate={openCreateDialog}
+                  onCreateProject={createDefaultProject}
                   onEdit={editMonitor}
                   onRefresh={loadMonitors}
                   pausedCount={pausedCount}
+                  projects={projects}
                 />
               )}
             </div>
@@ -496,6 +621,7 @@ const DashboardPage = () => {
           isSaving={isSavingMonitor}
           mode="create"
           onClose={closeCreateDialog}
+          projects={projects}
           onSubmit={handleCreateSubmit}
           onUpdate={updateCreateForm}
         />
@@ -507,8 +633,17 @@ const DashboardPage = () => {
           isSaving={isSavingMonitor}
           mode="edit"
           onClose={closeEditDialog}
+          projects={projects}
           onSubmit={handleEditSubmit}
           onUpdate={updateEditForm}
+        />
+      )}
+      {profileDialogOpen && (
+        <ProfileDialog
+          user={authUser}
+          isSaving={isSavingProfile}
+          onClose={() => setProfileDialogOpen(false)}
+          onSubmit={saveProfile}
         />
       )}
       </main>

@@ -1,7 +1,9 @@
 import dns from 'dns/promises';
 import net from 'net';
+import mongoose from 'mongoose';
 
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']);
+const ALLOWED_CHECK_TYPES = new Set(['HTTP', 'SSL', 'DNS']);
 const MIN_INTERVAL_MS = 30_000;
 const MAX_INTERVAL_MS = 86_400_000;
 const MIN_TIMEOUT_MS = 1_000;
@@ -10,6 +12,7 @@ const MAX_HEADERS = 20;
 const MAX_HEADER_LENGTH = 500;
 const MAX_BODY_LENGTH = 10_000;
 const MAX_NOTIFICATION_EMAILS = 10;
+const MAX_REGIONS = 8;
 
 const isPrivateIPv4 = (ip) => {
   const parts = ip.split('.').map(Number);
@@ -127,6 +130,48 @@ const normalizeEmails = (value) => {
   return emails;
 };
 
+const normalizeCheckTypes = (value) => {
+  const list = Array.isArray(value) ? value : String(value || 'HTTP').split(',');
+  const checkTypes = [...new Set(list.map((item) => String(item).trim().toUpperCase()).filter(Boolean))];
+  if (!checkTypes.length) return ['HTTP'];
+  const invalid = checkTypes.find((type) => !ALLOWED_CHECK_TYPES.has(type));
+  if (invalid) {
+    throw new Error(`Check type must be one of: ${[...ALLOWED_CHECK_TYPES].join(', ')}`);
+  }
+  return checkTypes;
+};
+
+const normalizeRegions = (value) => {
+  if (value == null || value === '') return ['primary'];
+  const list = Array.isArray(value) ? value : String(value).split(',');
+  const regions = [...new Set(list.map((item) => String(item).trim().toLowerCase()).filter(Boolean))];
+  if (regions.length > MAX_REGIONS) {
+    throw new Error(`Regions cannot exceed ${MAX_REGIONS}`);
+  }
+  const invalid = regions.find((region) => !/^[a-z0-9-]{2,40}$/.test(region));
+  if (invalid) {
+    throw new Error(`Invalid region: ${invalid}`);
+  }
+  return regions;
+};
+
+const normalizeCronExpression = (value) => {
+  const expression = String(value || '').trim();
+  if (!expression) return '';
+
+  const parts = expression.split(/\s+/);
+  if (parts.length !== 5) {
+    throw new Error('Cron expression must use 5 fields');
+  }
+
+  const validPart = /^(\*|\d{1,2}|\d{1,2}-\d{1,2}|\*\/\d{1,2})(,(\*|\d{1,2}|\d{1,2}-\d{1,2}|\*\/\d{1,2}))*$/;
+  if (parts.some((part) => !validPart.test(part))) {
+    throw new Error('Cron expression contains unsupported syntax');
+  }
+
+  return expression;
+};
+
 const clampNumber = (value, fallback, min, max, label) => {
   const number = value == null || value === '' ? fallback : Number(value);
   if (!Number.isFinite(number) || number < min || number > max) {
@@ -138,6 +183,14 @@ const clampNumber = (value, fallback, min, max, label) => {
 export const normalizeMonitorInput = async (input = {}, { partial = false } = {}) => {
   const data = {};
 
+  if (!partial || input.projectId !== undefined) {
+    data.projectId = input.projectId
+      ? mongoose.Types.ObjectId.isValid(input.projectId) ? input.projectId : (() => { throw new Error('Invalid project id'); })()
+      : null;
+  }
+  if (!partial || input.groupName !== undefined) {
+    data.groupName = String(input.groupName || 'Default').trim().slice(0, 80) || 'Default';
+  }
   if (!partial || input.url !== undefined) data.url = await normalizeUrl(input.url);
   if (!partial || input.method !== undefined) {
     const method = String(input.method || 'GET').trim().toUpperCase();
@@ -169,6 +222,15 @@ export const normalizeMonitorInput = async (input = {}, { partial = false } = {}
   }
   if (!partial || input.responseKeyword !== undefined) {
     data.responseKeyword = input.responseKeyword == null ? '' : String(input.responseKeyword).trim();
+  }
+  if (!partial || input.checkTypes !== undefined) {
+    data.checkTypes = normalizeCheckTypes(input.checkTypes);
+  }
+  if (!partial || input.regions !== undefined) {
+    data.regions = normalizeRegions(input.regions);
+  }
+  if (!partial || input.cronExpression !== undefined) {
+    data.cronExpression = normalizeCronExpression(input.cronExpression);
   }
   if (!partial || input.notificationEmails !== undefined) {
     data.notificationEmails = normalizeEmails(input.notificationEmails);

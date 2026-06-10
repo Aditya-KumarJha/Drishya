@@ -20,8 +20,6 @@ const userSchema = new mongoose.Schema(
     },
     username: {
       type: String,
-      unique: true,
-      sparse: true,
       lowercase: true,
       trim: true,
       minlength: 3,
@@ -58,6 +56,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    credits: {
+      type: Number,
+      default: 1000,
+      min: 0,
+    },
+    creditsUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -66,6 +74,14 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
+);
+
+userSchema.index(
+  { username: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { username: { $type: 'string' } },
+  }
 );
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);

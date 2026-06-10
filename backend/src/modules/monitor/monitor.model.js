@@ -8,6 +8,18 @@ const monitorSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+      default: null,
+      index: true,
+    },
+    groupName: {
+      type: String,
+      default: 'Default',
+      trim: true,
+      maxlength: 80,
+    },
     url: {
       type: String,
       required: true,
@@ -50,6 +62,30 @@ const monitorSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500,
     },
+    checkTypes: {
+      type: [String],
+      enum: ['HTTP', 'SSL', 'DNS'],
+      default: ['HTTP'],
+    },
+    sslDaysRemaining: {
+      type: Number,
+      default: null,
+    },
+    sslExpiresAt: Date,
+    dnsResolvedAddresses: {
+      type: [String],
+      default: [],
+    },
+    regions: {
+      type: [String],
+      default: ['primary'],
+    },
+    cronExpression: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 80,
+    },
     notificationEmails: {
       type: [String],
       default: [],
@@ -78,6 +114,7 @@ const monitorSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastChargedAt: Date,
     active: {
       type: Boolean,
       default: true,
@@ -89,11 +126,10 @@ const monitorSchema = new mongoose.Schema(
 // fast lookup by activity
 monitorSchema.index({ active: 1 });
 
-monitorSchema.pre('validate', function ensurePublicSlug(next) {
+monitorSchema.pre('validate', function ensurePublicSlug() {
   if (!this.publicSlug) {
     this.publicSlug = crypto.randomBytes(8).toString('hex');
   }
-  next();
 });
 
 export default mongoose.model('Monitor', monitorSchema);

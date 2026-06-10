@@ -50,7 +50,7 @@ const incidentPhases = [
     id: 'analyzing',
     glyph: '?',
     eyebrow: 'Trace in progress',
-    title: 'Drishyam Trace',
+    title: 'Drishya Trace',
     backgroundClass: 'bg-[#00E676]',
     panelClass: 'border-[#0A0C10] bg-white/18 text-[#0A0C10]',
     accentClass: 'border-[#0A0C10] text-[#0A0C10]',

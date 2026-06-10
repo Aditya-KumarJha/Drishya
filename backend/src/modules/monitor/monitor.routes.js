@@ -5,11 +5,6 @@ import { getAllMonitorsAdmin } from "./monitor.service.js";
 
 const router = express.Router();
 
-router.post("/", protect, createMonitorController);
-router.get("/", protect, getAllMonitorsController);
-router.put("/:id", protect, updateMonitorController);
-router.delete("/:id", protect, deleteMonitorController);
-
 // 🔥 admin → ALL monitors (global view)
 router.get("/admin/all", protect, isAdmin, async (req, res) => {
   try {
@@ -23,5 +18,10 @@ router.get("/admin/all", protect, isAdmin, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.post("/", protect, createMonitorController);
+router.get("/", protect, getAllMonitorsController);
+router.put("/:id", protect, updateMonitorController);
+router.delete("/:id", protect, deleteMonitorController);
 
 export default router;

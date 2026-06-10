@@ -57,7 +57,7 @@ const SidebarContent = ({
         type="button"
         onClick={compact ? onOpen : undefined}
         className={`flex min-w-0 items-center gap-3 ${compact ? 'justify-center' : 'cursor-default'}`}
-        aria-label={compact ? 'Open sidebar' : 'Drishyam Admin'}
+        aria-label={compact ? 'Open sidebar' : 'Drishya Admin'}
       >
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-[3px] border-black bg-[#FFD600] font-black italic text-black shadow-[4px_4px_0_#0F172A]">
           A

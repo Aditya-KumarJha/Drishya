@@ -10,6 +10,9 @@ import { startAIWorker } from "./src/workers/ai.worker.js";
 import { startNotificationListeners } from "./src/modules/notification/broker/listener.js";
 import { initSocket } from "./src/sockets/socket.js";
 import { validateEnv } from "./src/config/validateEnv.js";
+import { repairAuthIndexes } from "./src/modules/auth/auth.indexes.js";
+import redis from "./src/config/redis.js";
+import mongoose from "mongoose";
 import dns from "dns";
 
 const port = Number(process.env.PORT || 4000);
@@ -19,15 +22,19 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 const startServer = async () => {
   validateEnv();
   await connectDB();
+  await repairAuthIndexes();
 
   const server = http.createServer(app);
   initSocket(server);
 
-  startScheduler();
-  startBullWorker();
-  startAlertWorker();
-  startAIWorker();
-  startNotificationListeners().catch((error) => {
+  const scheduler = startScheduler();
+  const monitorWorker = startBullWorker();
+  const alertWorker = startAlertWorker();
+  const aiWorker = startAIWorker();
+  let notificationListeners = null;
+  startNotificationListeners().then((listeners) => {
+    notificationListeners = listeners;
+  }).catch((error) => {
     console.error("Notification listeners failed to start:", error.message);
   });
 
@@ -35,11 +42,27 @@ const startServer = async () => {
     console.log(`Server running on port ${port}`);
   });
 
-  const shutdown = () => {
+  let isShuttingDown = false;
+  const shutdown = async () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
     console.log("Shutting down server");
-    server.close(() => {
-      process.exit(0);
-    });
+    try {
+      scheduler?.close?.();
+      await Promise.allSettled([
+        monitorWorker?.close?.(),
+        alertWorker?.close?.(),
+        aiWorker?.close?.(),
+        notificationListeners?.close?.(),
+        redis.closeRedis?.(),
+      ]);
+      await mongoose.connection.close(false);
+      server.close(() => process.exit(0));
+      setTimeout(() => process.exit(0), 3000).unref();
+    } catch (error) {
+      console.error("Shutdown failed:", error.message);
+      process.exit(1);
+    }
   };
 
   process.on("SIGTERM", shutdown);
