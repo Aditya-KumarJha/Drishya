@@ -82,7 +82,7 @@ export const SidebarContent = ({ activeView, compact = false, onClose, onOpen, o
         ))}
       </nav>
 
-      <div className="mt-auto space-y-3">
+      <div className="mt-auto space-y-3 pt-5">
         <button
           type="button"
           onClick={handleLogout}

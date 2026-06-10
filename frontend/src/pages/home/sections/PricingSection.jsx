@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { getCurrentUser } from '../../../services/authApi';
+import { fetchCurrentUser, getCurrentUser } from '../../../services/authApi';
 import { openCreditCheckout } from '../../../services/razorpayCheckout';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -43,27 +44,45 @@ const plans = [
 
 const PricingSection = ({ className = '' }) => {
   const navigate = useNavigate();
+  const authUser = useSelector((state) => state.auth.user);
   const sectionRef = useRef(null);
   const cardRefs = useRef([]);
+  const [selectingPlanId, setSelectingPlanId] = useState('');
 
-  const handleSelectPlan = (plan) => {
-    const user = getCurrentUser();
+  const handleSelectPlan = async (plan) => {
+    if (selectingPlanId) return;
+
+    setSelectingPlanId(plan.id);
+    let user = authUser || getCurrentUser();
 
     if (!user) {
+      try {
+        user = await fetchCurrentUser();
+      } catch {
+        user = null;
+      }
+    }
+
+    if (!user) {
+      setSelectingPlanId('');
       toast.info('Sign in first to purchase credits');
-      navigate('/signin');
+      navigate('/signin', { state: { from: '/#pricing' } });
       return;
     }
 
-    openCreditCheckout({
-      planId: plan.id,
-      user,
-      onSuccess: () => toast.success('Credits added after payment verification'),
-    }).catch((error) => {
+    try {
+      await openCreditCheckout({
+        planId: plan.id,
+        user,
+        onSuccess: () => toast.success('Credits added after payment verification'),
+      });
+    } catch (error) {
       if (error.message !== 'Payment cancelled') {
         toast.error(error.message || 'Failed to complete payment');
       }
-    });
+    } finally {
+      setSelectingPlanId('');
+    }
   };
 
   useLayoutEffect(() => {
@@ -140,9 +159,10 @@ const PricingSection = ({ className = '' }) => {
             <button
               type="button"
               onClick={() => handleSelectPlan(plan)}
-              className="mt-5 border border-[#1E6BFF] bg-[#1E6BFF] px-3 py-3 text-left font-black uppercase italic tracking-[0.12em] text-white transition-colors hover:bg-[#08256B]"
+              disabled={Boolean(selectingPlanId)}
+              className="mt-5 border border-[#1E6BFF] bg-[#1E6BFF] px-3 py-3 text-left font-black uppercase italic tracking-[0.12em] text-white transition-colors hover:bg-[#08256B] disabled:cursor-wait disabled:opacity-70"
             >
-              Select plan
+              {selectingPlanId === plan.id ? 'Opening...' : 'Select plan'}
             </button>
           </article>
         ))}

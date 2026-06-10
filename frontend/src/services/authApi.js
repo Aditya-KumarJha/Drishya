@@ -6,6 +6,18 @@ export const getCurrentUser = () => {
   return userStr ? JSON.parse(userStr) : null;
 };
 
+export const fetchCurrentUser = async () => {
+  const { data } = await axiosInstance.get('/auth/me');
+  const user = data?.user || data?.data?.user || data?.data || data;
+
+  if (user && (user.email || user._id || user.id)) {
+    setCurrentUser(user);
+    return user;
+  }
+
+  return null;
+};
+
 export const setCurrentUser = (user) => {
   if (user) {
     localStorage.setItem('user', JSON.stringify(user));
