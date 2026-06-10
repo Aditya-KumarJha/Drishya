@@ -80,13 +80,24 @@ User browser
 ## Clone And Install
 
 ```bash
-git clone <your-repo-url>
-cd Smart-Monitoring-Web-Platform
+git clone https://github.com/Aditya-KumarJha/Drishya
+```
 
+```bash
+cd Drishya
+```
+
+```bash
 cd backend
+```
+```bash
 npm install
+```
 
+```bash
 cd ../frontend
+```
+```bash
 npm install
 ```
 
