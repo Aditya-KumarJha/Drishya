@@ -141,7 +141,7 @@ const DashboardPage = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (activeView === 'overview' || activeView === 'incidents' || activeView === 'status') {
+    if (activeView === 'overview' || activeView === 'incidents' || activeView === 'logs' || activeView === 'status') {
       const analyticsTimer = window.setTimeout(loadAnalytics, 0);
 
       return () => window.clearTimeout(analyticsTimer);
@@ -149,7 +149,7 @@ const DashboardPage = () => {
   }, [activeView, loadAnalytics, monitors.length]);
 
   useEffect(() => {
-    if (activeView === 'incidents') {
+    if (activeView === 'incidents' || activeView === 'logs') {
       const detailsTimer = window.setTimeout(loadIncidentDetails, 0);
 
       return () => window.clearTimeout(detailsTimer);
@@ -220,20 +220,35 @@ const DashboardPage = () => {
     setEditDialogOpen(false);
   };
 
+  const buildMonitorPayload = (form) => {
+    let headers = {};
+    if (form.headersText?.trim()) {
+      headers = JSON.parse(form.headersText);
+    }
+
+    return {
+      ...form,
+      headers,
+      expectedStatusCodes: form.expectedStatusCodes,
+      notificationEmails: form.notificationEmailsText,
+    };
+  };
+
   const handleCreateSubmit = (event) => {
     event.preventDefault();
 
     try {
       new URL(createForm.url);
+      const payload = buildMonitorPayload(createForm);
+      dispatch(createMonitorRecord(payload))
+        .unwrap()
+        .then(() => {
+          closeCreateDialog();
+        });
     } catch {
+      toast.error('Check the URL and headers JSON before saving');
       return;
     }
-
-    dispatch(createMonitorRecord(createForm))
-      .unwrap()
-      .then(() => {
-        closeCreateDialog();
-      });
   };
 
   const handleEditSubmit = (event) => {
@@ -241,15 +256,16 @@ const DashboardPage = () => {
 
     try {
       new URL(editForm.url);
+      const payload = buildMonitorPayload(editForm);
+      dispatch(updateMonitorRecord({ id: editingId, data: payload }))
+        .unwrap()
+        .then(() => {
+          closeEditDialog();
+        });
     } catch {
+      toast.error('Check the URL and headers JSON before saving');
       return;
     }
-
-    dispatch(updateMonitorRecord({ id: editingId, data: editForm }))
-      .unwrap()
-      .then(() => {
-        closeEditDialog();
-      });
   };
 
   const editMonitor = (monitor) => {
@@ -258,6 +274,15 @@ const DashboardPage = () => {
       url: monitor.url,
       method: monitor.method,
       interval: String(monitor.interval),
+      timeoutMs: String(monitor.timeoutMs || 10000),
+      expectedStatusCodes: monitor.expectedStatusCodes?.join(',') || '',
+      headersText: monitor.headers && Object.keys(monitor.headers).length
+        ? JSON.stringify(monitor.headers, null, 2)
+        : '',
+      body: monitor.body || '',
+      responseKeyword: monitor.responseKeyword || '',
+      notificationEmailsText: monitor.notificationEmails?.join(', ') || '',
+      publicStatusEnabled: monitor.publicStatusEnabled !== false,
       active: monitor.active,
     });
     setEditDialogOpen(true);
@@ -412,6 +437,18 @@ const DashboardPage = () => {
                 />
               )}
 
+              {activeView === 'logs' && (
+                <IncidentsSection
+                  aiInsightsByMonitorId={aiInsightsByMonitorId}
+                  analyticsByMonitorId={analyticsByMonitorId}
+                  incidentsByMonitorId={incidentsByMonitorId}
+                  isLoadingAnalytics={isLoadingAnalytics || isLoadingIncidentDetails}
+                  monitors={monitors}
+                  onRefresh={refreshIncidents}
+                  showLogsFirst
+                />
+              )}
+
               {activeView === 'alerts' && (
                 <AlertsSection
                   alertsPayload={alertsPayload}
@@ -429,6 +466,7 @@ const DashboardPage = () => {
                   isLoadingSummary={isLoadingDashboardSummary}
                   monitors={monitors}
                   onRefresh={refreshStatusPages}
+                  apiBaseUrl={getApiBaseUrl()}
                   summary={dashboardSummary}
                   summaryError={dashboardSummaryError || analyticsError}
                 />
@@ -442,6 +480,7 @@ const DashboardPage = () => {
                   isLoadingMonitors={isLoadingMonitors}
                   monitors={monitors}
                   onCreate={openCreateDialog}
+                  onEdit={editMonitor}
                   onRefresh={loadMonitors}
                   pausedCount={pausedCount}
                 />

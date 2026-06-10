@@ -25,6 +25,18 @@ export const mapMonitor = (monitor) => {
     url: monitor.url,
     method: monitor.method || 'GET',
     interval: monitor.interval || 60000,
+    timeoutMs: monitor.timeoutMs || 10000,
+    expectedStatusCodes: Array.isArray(monitor.expectedStatusCodes) ? monitor.expectedStatusCodes : [],
+    headers: monitor.headers || {},
+    body: monitor.body || '',
+    responseKeyword: monitor.responseKeyword || '',
+    notificationEmails: Array.isArray(monitor.notificationEmails) ? monitor.notificationEmails : [],
+    publicSlug: monitor.publicSlug || '',
+    publicStatusEnabled: monitor.publicStatusEnabled !== false,
+    lastStatus: monitor.lastStatus || 'PENDING',
+    lastCheckedAt: monitor.lastCheckedAt,
+    lastResponseTime: monitor.lastResponseTime || 0,
+    failureCount: monitor.failureCount || 0,
     active,
     status,
     createdAt: monitor.createdAt,
@@ -50,28 +62,35 @@ export const getMonitors = async () => {
  * Create a new monitor
  * POST /monitors
  */
-export const createMonitor = async ({ url, method, interval, active }) => {
+const buildMonitorPayload = (data) => ({
+  url: data.url,
+  method: data.method,
+  interval: Number(data.interval),
+  timeoutMs: Number(data.timeoutMs || 10000),
+  expectedStatusCodes: Array.isArray(data.expectedStatusCodes)
+    ? data.expectedStatusCodes
+    : String(data.expectedStatusCodes || '')
+      .split(',')
+      .map((item) => Number(item.trim()))
+      .filter(Number.isFinite),
+  headers: data.headers || {},
+  body: data.body || '',
+  responseKeyword: data.responseKeyword || '',
+  notificationEmails: Array.isArray(data.notificationEmails)
+    ? data.notificationEmails
+    : String(data.notificationEmails || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  publicStatusEnabled: data.publicStatusEnabled !== false,
+  active: data.active !== false,
+});
+
+export const createMonitor = async (monitorData) => {
   try {
-    const { data: created } = await axiosInstance.post('/monitors', {
-      url,
-      method,
-      interval: Number(interval),
-    });
+    const { data: created } = await axiosInstance.post('/monitors', buildMonitorPayload(monitorData));
 
     const createdMonitor = created?.data || created;
-
-    // If monitor should be paused, update it after creation
-    if (active === false) {
-      const id = createdMonitor._id || createdMonitor.id;
-      const updated = await updateMonitor(id, { 
-        url: createdMonitor.url,
-        method: createdMonitor.method,
-        interval: createdMonitor.interval,
-        active: false 
-      });
-      return updated;
-    }
-
     return mapMonitor(createdMonitor);
   } catch (error) {
     throw new Error(error.response?.data?.error || 'Failed to create monitor', { cause: error });
@@ -84,12 +103,7 @@ export const createMonitor = async ({ url, method, interval, active }) => {
  */
 export const updateMonitor = async (id, data) => {
   try {
-    const { data: payload } = await axiosInstance.put(`/monitors/${id}`, {
-      url: data.url,
-      method: data.method,
-      interval: Number(data.interval),
-      active: data.active,
-    });
+    const { data: payload } = await axiosInstance.put(`/monitors/${id}`, buildMonitorPayload(data));
 
     return mapMonitor(payload?.data || payload);
   } catch (error) {

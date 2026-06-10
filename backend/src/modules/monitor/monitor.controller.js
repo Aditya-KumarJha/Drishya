@@ -1,14 +1,14 @@
 import { createMonitor, getAllMonitors, updateMonitorById, deleteMonitorById } from "./monitor.service.js";
+import { normalizeMonitorInput } from "./monitor.validation.js";
 
 export const createMonitorController = async (req, res) => {
   try {
-    const { url, method, interval } = req.body;
-    // Keeping your logic: using req.user._id directly
-    const monitor = await createMonitor({ url, method, interval, userId: req.user._id });
+    const monitorInput = await normalizeMonitorInput(req.body);
+    const monitor = await createMonitor({ ...monitorInput, userId: req.user._id });
     
     res.status(201).json(monitor);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 };
 
@@ -29,7 +29,8 @@ export const getAllMonitorsController = async (req, res) => {
 export const updateMonitorController = async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await updateMonitorById(id, req.user._id, req.body);
+    const monitorInput = await normalizeMonitorInput(req.body, { partial: true });
+    const updated = await updateMonitorById(id, req.user._id, monitorInput);
 
     if (!updated) {
       return res.status(404).json({ error: "Monitor not found or unauthorized" });
@@ -37,7 +38,7 @@ export const updateMonitorController = async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 };
 

@@ -37,3 +37,19 @@ export const getMonitorAnalytics = async (monitorId, range = '24h') => {
     };
   }
 };
+
+export const getMonitorLogs = async (monitorId, { page = 1, limit = 25 } = {}) => {
+  try {
+    const { data } = await axiosInstance.get(`/logs/${monitorId}`, {
+      params: { page, limit },
+    });
+    return {
+      data: Array.isArray(data?.data) ? data.data : [],
+      page: data?.page || page,
+      total: data?.total || 0,
+      totalPages: data?.totalPages || 0,
+    };
+  } catch (error) {
+    throw new Error(error.response?.data?.error || 'Failed to fetch monitor logs', { cause: error });
+  }
+};

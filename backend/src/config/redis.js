@@ -51,6 +51,19 @@ class FakeRedis {
     return existed;
   }
 
+  async incr(key) {
+    this.purgeExpired(key);
+    const nextValue = Number(this.store.get(key) || 0) + 1;
+    this.store.set(key, String(nextValue));
+    return nextValue;
+  }
+
+  async expire(key, seconds) {
+    if (!this.store.has(key)) return 0;
+    this.expires.set(key, Date.now() + Number(seconds) * 1000);
+    return 1;
+  }
+
   on() {
     /* no-op in tests */
   }

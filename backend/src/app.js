@@ -9,6 +9,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import alertRoutes from "./modules/alert/alert.routes.js";
 import incidentRoutes from "./modules/incident/incident.routes.js";
+import statusRoutes from "./modules/status/status.routes.js";
 import { isOriginAllowed } from "./utils/origin.js";
 
 const app = express();
@@ -48,6 +49,7 @@ app.use("/dashboard", dashboardRoutes);
 app.use("/admin", adminRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/incidents", incidentRoutes);
+app.use("/status", statusRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {

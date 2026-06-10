@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import AuthLayout from './AuthLayout';
 import AuthPanel from './AuthPanel';
 import FormField from './FormField';
-import { checkAuthUser, loginUser, setUserEmail } from '../../store/authSlice';
+import { checkAuthUser, loginUser, refreshToken, setUserEmail } from '../../store/authSlice';
 import { setCurrentUser } from '../../services/authApi';
 import { SEO } from '../../components/seo';
 
@@ -32,14 +32,23 @@ const SignInPage = () => {
     if (auth === 'success') {
       (async () => {
         try {
-          const response = await dispatch(checkAuthUser()).unwrap();
-          if (response?.user) {
-            setCurrentUser(response.user);
+          let response;
+          try {
+            response = await dispatch(checkAuthUser()).unwrap();
+          } catch {
+            await dispatch(refreshToken()).unwrap();
+            response = await dispatch(checkAuthUser()).unwrap();
+          }
+
+          const user = response?.user || response?.data?.user;
+          if (user) {
+            setCurrentUser(user);
           }
           toast.success('Signed in successfully');
           navigate('/dashboard/overview', { replace: true });
         } catch (err) {
-          setError(err?.message || 'Session verification failed. Please sign in again.');
+          const message = err?.message || err?.data?.message || 'Session verification failed. Please sign in again.';
+          setError(message);
         }
       })();
     }

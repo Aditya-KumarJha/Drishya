@@ -7,7 +7,15 @@ const logSchema = new mongoose.Schema({
 },
   status: Number,
   responseTime: Number,
-  success: Boolean
+  success: Boolean,
+  error: {
+    type: String,
+    default: '',
+  },
+  checkedAt: {
+    type: Date,
+    default: Date.now,
+  },
 }, { timestamps: true });
 
 

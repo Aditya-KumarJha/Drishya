@@ -1,5 +1,8 @@
 import { monitorQueue } from '../monitor/monitor.queue.js';
 import { getActiveMonitors } from "./monitor.service.js";
+import redis from "../../config/redis.js";
+
+const buildScheduleLockKey = (monitorId) => `monitor:${monitorId}:schedule-lock`;
 
 export const startScheduler = () => {
   console.log('🟢 Scheduler started...');
@@ -17,14 +20,19 @@ export const startScheduler = () => {
         const lastRun = lastRunMap.get(id) || 0;
 
         if (now - lastRun >= monitor.interval) {
+          const lockSeconds = Math.max(10, Math.ceil((monitor.interval || 60000) / 1000) - 1);
+          const lock = await redis.set(buildScheduleLockKey(id), String(now), 'EX', lockSeconds, 'NX');
+          if (lock !== 'OK') {
+            continue;
+          }
+
           await monitorQueue.add(
             'check-url',
             {
               monitorId: monitor._id.toString(),
-              url: monitor.url,
-              method: monitor.method,
             },
             {
+              jobId: `check-${id}-${Math.floor(now / Math.max(monitor.interval || 60000, 30000))}`,
               attempts: 3,
               backoff: {
                 type: 'exponential',

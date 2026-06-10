@@ -137,12 +137,88 @@ const MonitorDialog = ({
             />
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Timeout ms</span>
+              <input
+                required
+                type="number"
+                min="1000"
+                max="30000"
+                step="1000"
+                value={form.timeoutMs}
+                onChange={(event) => onUpdate('timeoutMs', event.target.value)}
+                className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+              />
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Expected status</span>
+              <input
+                value={form.expectedStatusCodes}
+                onChange={(event) => onUpdate('expectedStatusCodes', event.target.value)}
+                className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+                placeholder="200,204"
+              />
+            </label>
+          </div>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Alert recipients</span>
+            <input
+              value={form.notificationEmailsText}
+              onChange={(event) => onUpdate('notificationEmailsText', event.target.value)}
+              className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+              placeholder="ops@example.com, dev@example.com"
+            />
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Response keyword</span>
+            <input
+              value={form.responseKeyword}
+              onChange={(event) => onUpdate('responseKeyword', event.target.value)}
+              className="h-11 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 text-sm font-bold outline-none focus:bg-white"
+              placeholder="healthy"
+            />
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Headers JSON</span>
+            <textarea
+              value={form.headersText}
+              onChange={(event) => onUpdate('headersText', event.target.value)}
+              className="min-h-24 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 py-2 text-sm font-bold outline-none focus:bg-white"
+              placeholder='{"Authorization":"Bearer token"}'
+            />
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Request body</span>
+            <textarea
+              value={form.body}
+              onChange={(event) => onUpdate('body', event.target.value)}
+              className="min-h-24 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 py-2 text-sm font-bold outline-none focus:bg-white"
+              placeholder='{"ping":true}'
+            />
+          </label>
+
           <label className="flex items-center justify-between gap-3 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 py-3">
             <span className="text-sm font-black text-slate-700">Active monitor</span>
             <input
               type="checkbox"
               checked={form.active}
               onChange={(event) => onUpdate('active', event.target.checked)}
+              className="h-5 w-5 accent-[#1E6BFF]"
+            />
+          </label>
+
+          <label className="flex items-center justify-between gap-3 rounded-xl border-[3px] border-black bg-[#FDFBF7] px-3 py-3">
+            <span className="text-sm font-black text-slate-700">Public status page</span>
+            <input
+              type="checkbox"
+              checked={form.publicStatusEnabled}
+              onChange={(event) => onUpdate('publicStatusEnabled', event.target.checked)}
               className="h-5 w-5 accent-[#1E6BFF]"
             />
           </label>

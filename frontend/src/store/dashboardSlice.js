@@ -180,9 +180,7 @@ export const toggleMonitorRecord = createAsyncThunk(
   async (monitor, { rejectWithValue }) => {
     try {
       return await updateMonitor(monitor.id, {
-        url: monitor.url,
-        method: monitor.method,
-        interval: monitor.interval,
+        ...monitor,
         active: !monitor.active,
       });
     } catch (error) {

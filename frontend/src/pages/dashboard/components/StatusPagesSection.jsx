@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, RefreshCcw, Signal } from 'lucide-react';
+import { getPublicStatus } from '../../../services/statusApi';
 import { formatInterval } from '../dashboardUtils';
 
 const getMonitorState = (monitor, analytics) => {
@@ -49,13 +51,44 @@ const SummaryCard = ({ icon: Icon, label, value, tone }) => (
 
 const StatusPagesSection = ({
   analyticsByMonitorId,
+  apiBaseUrl,
   isLoadingAnalytics,
   isLoadingSummary,
   monitors,
   onRefresh,
   summary,
   summaryError,
-}) => (
+}) => {
+  const [publicStatusBySlug, setPublicStatusBySlug] = useState({});
+
+  useEffect(() => {
+    const publicMonitors = monitors.filter((monitor) => monitor.publicStatusEnabled && monitor.publicSlug);
+    if (!publicMonitors.length) {
+      setPublicStatusBySlug({});
+      return undefined;
+    }
+
+    let active = true;
+    Promise.allSettled(publicMonitors.map((monitor) => getPublicStatus(monitor.publicSlug)))
+      .then((results) => {
+        if (!active) return;
+
+        const nextStatus = {};
+        results.forEach((result, index) => {
+          const slug = publicMonitors[index].publicSlug;
+          nextStatus[slug] = result.status === 'fulfilled'
+            ? { ok: true, payload: result.value }
+            : { ok: false, error: result.reason?.message || 'Public endpoint unavailable' };
+        });
+        setPublicStatusBySlug(nextStatus);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [monitors]);
+
+  return (
   <section className="grid min-w-0 gap-5">
     <div className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-[6px_6px_0_#0F172A]">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
@@ -100,6 +133,8 @@ const StatusPagesSection = ({
         monitors.map((monitor) => {
           const analytics = analyticsByMonitorId[monitor.id];
           const state = getMonitorState(monitor, analytics);
+          const publicStatus = monitor.publicSlug ? publicStatusBySlug[monitor.publicSlug] : null;
+          const publicMonitor = publicStatus?.payload?.monitor;
 
           return (
             <article key={monitor.id} className="min-w-0 rounded-2xl border-[3px] border-black bg-white p-4 shadow-[6px_6px_0_#0F172A]">
@@ -130,6 +165,28 @@ const StatusPagesSection = ({
                   <p className="mt-1 text-sm font-black text-slate-950">{analytics ? `${analytics.avgLatency}ms` : '-'}</p>
                 </div>
               </div>
+              <div className="mt-4 rounded-xl border-2 border-black bg-[#EAF1FF] px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Public endpoint</p>
+                {monitor.publicStatusEnabled && monitor.publicSlug ? (
+                  <div className="mt-1 grid gap-2">
+                    <a
+                      href={`${apiBaseUrl}/status/${monitor.publicSlug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block break-all text-sm font-black text-[#1E6BFF] underline decoration-[3px] underline-offset-4"
+                    >
+                      {apiBaseUrl}/status/{monitor.publicSlug}
+                    </a>
+                    <div className={`rounded-lg border-2 border-black px-3 py-2 text-xs font-black ${publicStatus?.ok ? 'bg-emerald-50 text-emerald-700' : publicStatus ? 'bg-red-50 text-red-700' : 'bg-white text-slate-500'}`}>
+                      {publicStatus?.ok
+                        ? `Public API live: ${publicMonitor?.lastStatus || 'PENDING'}`
+                        : publicStatus?.error || 'Checking public API'}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm font-black text-slate-500">Public status disabled</p>
+                )}
+              </div>
             </article>
           );
         })
@@ -143,6 +200,7 @@ const StatusPagesSection = ({
       </div>
     )}
   </section>
-);
+  );
+};
 
 export default StatusPagesSection;

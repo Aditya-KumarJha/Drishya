@@ -7,11 +7,26 @@ const refreshExpiry = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const refreshSessionLockSeconds = Number(process.env.REFRESH_SESSION_LOCK_SECONDS || 5);
 
 const isProduction = process.env.NODE_ENV === 'production';
-const sameSitePolicy = (process.env.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax')).toLowerCase();
+const getOrigin = (value) => {
+  try {
+    return value ? new URL(value).origin : '';
+  } catch {
+    return '';
+  }
+};
+
+const backendOrigin = getOrigin(process.env.BACKEND_URL);
+const frontendOrigin = getOrigin((process.env.FRONTEND_URL || process.env.CORS_ORIGIN || '').split(',')[0]?.trim());
+const isHttpsDeployment = backendOrigin.startsWith('https://') || frontendOrigin.startsWith('https://');
+const isCrossSiteDeployment = Boolean(backendOrigin && frontendOrigin && backendOrigin !== frontendOrigin);
+const shouldUseCrossSiteCookies = isProduction || (isHttpsDeployment && isCrossSiteDeployment);
+const sameSitePolicy = (
+  process.env.COOKIE_SAME_SITE || (shouldUseCrossSiteCookies ? 'none' : 'lax')
+).toLowerCase();
 const secureCookie =
   process.env.COOKIE_SECURE != null
     ? String(process.env.COOKIE_SECURE).toLowerCase() === 'true'
-    : isProduction || sameSitePolicy === 'none';
+    : shouldUseCrossSiteCookies || sameSitePolicy === 'none';
 const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
 const buildCookieOptions = (maxAge) => ({

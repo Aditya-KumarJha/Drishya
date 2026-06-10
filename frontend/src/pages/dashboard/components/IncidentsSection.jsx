@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Activity, AlertTriangle, BarChart3, BrainCircuit, CheckCircle2,
-  Clock3, Gauge, Lightbulb, RefreshCcw, TrendingUp, ArrowLeft, Signal, Timer
+  ArrowLeft, BrainCircuit, Lightbulb, RefreshCcw, TrendingUp
 } from 'lucide-react';
 import UplotLineChart from '../../../components/charts/UplotLineChart';
+import { getMonitorLogs } from '../../../services/logApi';
 
 // --- HELPERS ---
 const getHealthStyle = (analytics) => {
@@ -119,6 +119,77 @@ const AIInsightPanel = ({ insight, incident }) => {
   );
 };
 
+const RawLogsTable = ({ monitorId }) => {
+  const [logs, setLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!monitorId) return;
+    let active = true;
+    setIsLoading(true);
+    setError('');
+    getMonitorLogs(monitorId, { limit: 25 })
+      .then((payload) => {
+        if (active) setLogs(payload.data || []);
+      })
+      .catch((err) => {
+        if (active) setError(err.message || 'Failed to load logs');
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [monitorId]);
+
+  return (
+    <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-black uppercase italic">Raw check logs</h3>
+        <span className="rounded-lg border-2 border-black bg-[#FDFBF7] px-2 py-1 text-[10px] font-black">
+          {isLoading ? 'LOADING' : `${logs.length} ROWS`}
+        </span>
+      </div>
+      {error && <div className="mb-3 rounded-xl border-2 border-red-400 bg-red-50 p-3 text-sm font-black text-red-700">{error}</div>}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-left text-sm">
+          <thead className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+            <tr>
+              <th className="border-b-2 border-slate-200 px-3 py-2">Time</th>
+              <th className="border-b-2 border-slate-200 px-3 py-2">State</th>
+              <th className="border-b-2 border-slate-200 px-3 py-2">Status</th>
+              <th className="border-b-2 border-slate-200 px-3 py-2">Latency</th>
+              <th className="border-b-2 border-slate-200 px-3 py-2">Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => (
+              <tr key={log._id || log.id}>
+                <td className="border-b border-slate-100 px-3 py-2 font-bold">{formatDateTime(log.checkedAt || log.createdAt)}</td>
+                <td className="border-b border-slate-100 px-3 py-2">
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-black ${log.success ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-red-300 bg-red-50 text-red-700'}`}>
+                    {log.success ? 'UP' : 'DOWN'}
+                  </span>
+                </td>
+                <td className="border-b border-slate-100 px-3 py-2 font-black">{log.status || '-'}</td>
+                <td className="border-b border-slate-100 px-3 py-2 font-black">{log.responseTime || 0}ms</td>
+                <td className="border-b border-slate-100 px-3 py-2 font-bold text-slate-500">{log.error || '-'}</td>
+              </tr>
+            ))}
+            {!isLoading && logs.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-3 py-8 text-center font-black text-slate-400">No raw logs yet</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 // --- MAIN INCIDENTS SECTION ---
 const IncidentsSection = ({
   aiInsightsByMonitorId = {},
@@ -126,7 +197,8 @@ const IncidentsSection = ({
   incidentsByMonitorId = {},
   isLoadingAnalytics,
   monitors = [],
-  onRefresh
+  onRefresh,
+  showLogsFirst = false,
 }) => {
   const [selectedId, setSelectedId] = useState(null);
   const selectedMonitor = monitors.find(m => m.id === selectedId);
@@ -188,6 +260,7 @@ const IncidentsSection = ({
         </div>
 
         {/* Deep AI Analysis (Full Detail) */}
+        <RawLogsTable monitorId={selectedMonitor.id} />
         <AIInsightPanel insight={insight} incident={incident} />
       </section>
     );
@@ -199,7 +272,7 @@ const IncidentsSection = ({
       {/* Header remain same as list... */}
       <div className="rounded-2xl border-[3px] border-black bg-white p-5 shadow-[6px_6px_0_#0F172A]">
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-xl font-black uppercase italic">Fleet Health</h2>
+          <h2 className="text-xl font-black uppercase italic">{showLogsFirst ? 'Monitor Logs' : 'Fleet Health'}</h2>
           <button onClick={onRefresh} className="flex items-center gap-2 rounded-xl border-[3px] border-black bg-[#FFD600] px-4 py-2 text-xs font-black shadow-[3px_3px_0_#000]">
             <RefreshCcw size={14} strokeWidth={3} /> REFRESH
           </button>

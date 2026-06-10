@@ -65,8 +65,13 @@ export const processAlertJob = async ({ monitorId, incidentId }) => {
     }
 
     const ownerEmail = monitor.userId?.email;
-    const recipient = process.env.ALERT_OVERRIDE_EMAIL || ownerEmail;
-    if (!recipient) {
+    const monitorRecipients = Array.isArray(monitor.notificationEmails)
+      ? monitor.notificationEmails
+      : [];
+    const recipient = process.env.ALERT_OVERRIDE_EMAIL
+      ? [process.env.ALERT_OVERRIDE_EMAIL]
+      : [...new Set([...monitorRecipients, ownerEmail].filter(Boolean))];
+    if (!recipient.length) {
       throw new Error(`Monitor ${monitorId} owner email not found for alert`);
     }
 
@@ -123,7 +128,7 @@ ${formattedSuggestions}
     await Alert.create({
       monitorId,
       incidentId: incident._id,
-      recipientEmail: recipient,
+      recipientEmail: recipient.join(','),
       status: "SENT",
       message,
       ai: ai

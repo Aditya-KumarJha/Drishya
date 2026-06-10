@@ -16,7 +16,7 @@ const SettingCard = ({ icon: Icon, label, value, note }) => (
   </article>
 );
 
-const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMonitors, monitors, onCreate, onRefresh, pausedCount }) => (
+const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMonitors, monitors, onCreate, onEdit, onRefresh, pausedCount }) => (
   <section className="grid min-w-0 gap-5">
     <div className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-[6px_6px_0_#0F172A]">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
@@ -60,8 +60,8 @@ const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMo
       <SettingCard
         icon={Database}
         label="Backend routes in use"
-        value="/monitors, /logs/analytics/:id, /dashboard/summary, /dashboard/incidents/:id, /dashboard/ai/:id"
-        note="The empty auth/admin/settings backend modules do not expose routes yet, so this tab avoids fake controls."
+        value="/monitors, /logs/:id, /logs/analytics/:id, /dashboard/summary, /dashboard/incidents/:id, /ai/insights/:id"
+        note="These controls update live monitor records instead of showing placeholder settings."
       />
     </div>
 
@@ -70,7 +70,7 @@ const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMo
         <div>
           <h3 className="font-black text-slate-950">Monitor configuration</h3>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            Add or edit backend monitor records to change URL, method, interval and active state.
+            Add or edit monitor records to change API assertions, alert recipients, timeout and public status settings.
           </p>
         </div>
         <button
@@ -88,19 +88,38 @@ const SettingsSection = ({ activeCount, apiBaseUrl, averageInterval, isLoadingMo
             No backend monitor records yet.
           </div>
         ) : (
-          monitors.slice(0, 5).map((monitor) => (
-            <div key={monitor.id} className="grid gap-2 rounded-xl border-[3px] border-black bg-[#FDFBF7] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          monitors.map((monitor) => (
+            <div key={monitor.id} className="grid gap-3 rounded-xl border-[3px] border-black bg-[#FDFBF7] p-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <div className="min-w-0">
                 <p className="truncate font-black text-slate-950">{monitor.name}</p>
                 <p className="mt-1 break-all text-sm font-bold text-slate-500">{monitor.method} {monitor.url}</p>
+                <div className="mt-3 grid gap-2 text-[10px] font-black uppercase tracking-[0.08em] sm:grid-cols-2 xl:grid-cols-4">
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">Timeout {monitor.timeoutMs || 10000}ms</span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    Expected {monitor.expectedStatusCodes?.length ? monitor.expectedStatusCodes.join(',') : '2xx/3xx'}
+                  </span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    Alerts {monitor.notificationEmails?.length ? monitor.notificationEmails.join(', ') : 'owner email'}
+                  </span>
+                  <span className="rounded-lg border-2 border-black bg-white px-2 py-1">
+                    Public {monitor.publicStatusEnabled ? 'enabled' : 'off'}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.12em]">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em]">
                 <span className={`rounded-full border px-2.5 py-1 ${monitor.active ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
                   {monitor.active ? 'Active' : 'Paused'}
                 </span>
                 <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-700">
                   {formatInterval(monitor.interval)}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => onEdit(monitor)}
+                  className="rounded-xl border-[3px] border-black bg-[#FFD600] px-3 py-2 text-xs font-black text-black shadow-[3px_3px_0_#0F172A] hover:bg-[#00E676]"
+                >
+                  Edit settings
+                </button>
               </div>
             </div>
           ))

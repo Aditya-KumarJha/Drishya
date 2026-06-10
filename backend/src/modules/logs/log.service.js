@@ -3,22 +3,22 @@ import mongoose from "mongoose";
 import Log from "./log.model.js";
 
 export const getMonitorAnalytics = async (monitorId, range = "24h") => {
-  // ⏱ time window
   const now = new Date();
-  let from = new Date(now - 24 * 60 * 60 * 1000); // default 24h
+  let from = new Date(now - 24 * 60 * 60 * 1000);
   if (range === "1h") from = new Date(now - 60 * 60 * 1000);
+  if (range === "7d") from = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  if (range === "30d") from = new Date(now - 30 * 24 * 60 * 60 * 1000);
 
   const result = await Log.aggregate([
     {
       $match: {
-        monitorId: new mongoose.Types.ObjectId(monitorId),           // dev me string match
-        // createdAt: { $gte: from }       // time filter
+        monitorId: new mongoose.Types.ObjectId(monitorId),
+        createdAt: { $gte: from },
       }
     },
 
     {
       $facet: {
-        // 1) SUMMARY
         summary: [
           {
             $group: {
@@ -35,7 +35,6 @@ export const getMonitorAnalytics = async (monitorId, range = "24h") => {
           }
         ],
 
-        // 2) TIME-SERIES (5 min buckets)
         timeseries: [
           {
             $group: {
@@ -51,7 +50,6 @@ export const getMonitorAnalytics = async (monitorId, range = "24h") => {
           { $sort: { _id: 1 } }
         ],
 
-        // 3) LATEST STATUS
         latest: [
           { $sort: { createdAt: -1 } },
           { $limit: 1 }
@@ -69,15 +67,13 @@ export const getMonitorAnalytics = async (monitorId, range = "24h") => {
     failures: 0
   };
 
-  // 🧮 uptime %
   const uptime =
     summary.totalChecks === 0
       ? 0
       : ((summary.success / summary.totalChecks) * 100).toFixed(2);
 
-  // 📡 latest status
   const latestStatus =
-    data.latest[0]?.success === false ? "DOWN" : "UP";
+    !data.latest[0] ? "PENDING" : data.latest[0].success === false ? "DOWN" : "UP";
 
   return {
     uptime,
@@ -90,5 +86,28 @@ export const getMonitorAnalytics = async (monitorId, range = "24h") => {
       time: t._id,
       latency: Math.round(t.avgLatency)
     }))
+  };
+};
+
+export const getMonitorLogs = async (monitorId, { page = 1, limit = 25 } = {}) => {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 25));
+  const skip = (safePage - 1) * safeLimit;
+
+  const filter = { monitorId };
+  const [logs, total] = await Promise.all([
+    Log.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(safeLimit)
+      .lean(),
+    Log.countDocuments(filter),
+  ]);
+
+  return {
+    data: logs,
+    page: safePage,
+    total,
+    totalPages: Math.ceil(total / safeLimit),
   };
 };

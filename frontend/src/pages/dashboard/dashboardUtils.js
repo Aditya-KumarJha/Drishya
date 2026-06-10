@@ -7,6 +7,8 @@ export const intervalLabels = {
   30000: '30s',
   60000: '1m',
   120000: '2m',
+  300000: '5m',
+  900000: '15m',
 };
 
 export const formatMonitorDate = (date) => {
@@ -20,4 +22,4 @@ export const formatMonitorDate = (date) => {
   }).format(new Date(date));
 };
 
-export const formatInterval = (interval) => intervalLabels[interval] || `${interval}ms`;
+export const formatInterval = (interval) => intervalLabels[interval] || `${Math.round(Number(interval || 0) / 1000)}s`;
